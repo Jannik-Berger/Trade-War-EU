@@ -1,0 +1,293 @@
+#This script was used to convert specific obtained data from the General Administration of Costums of China
+
+#The data format of Chinese economic data is unfortunately irregular in structure between downloaded data and has to be performed individually, for the 
+#four obtained data frames. Also the datasets obtained from the Chinese Customs Authority GACC has compiled data in bad csv formats, making it impossible
+#to read out the data from some hs6 comodities. The errors that are introduced in the csv because of these errors have to be cleaned from the dataframes
+#and the hs codes that contain such errors have to be omitted completely in the compilation of the chinese economic data (e.g. sometimes text is stored in 
+#multiple rows of the csv although it belongs to one element, or "" are contained in the text)
+
+
+  
+  china_world_import<- read.csv("C:/Users/nikan/OneDrive/Desktop/Trading_Data/R_Trading/Raw_China_Trade/China_World_Import.csv", header = T, na.strings=c("","NA"))
+  china_world_export <- read.csv("C:/Users/nikan/OneDrive/Desktop/Trading_Data/R_Trading/Raw_China_Trade/China_World_Export.csv", header = T, na.strings=c("","NA"))
+  china_us_import <- read.csv("C:/Users/nikan/OneDrive/Desktop/Trading_Data/R_Trading/Raw_China_Trade/China_US_Import.csv", header = T, na.strings=c("","NA"))
+  china_us_export <- read.csv("C:/Users/nikan/OneDrive/Desktop/Trading_Data/R_Trading/Raw_China_Trade/China_US_Export.csv", header = T, na.strings=c("","NA"))
+  
+  
+  #Clean up dataframes from corrupted entries
+  
+  #Make sure that empty entries correspond to NA
+  china_world_export[china_world_export == "\t"] <- NA
+  china_world_import[china_world_import == "\t"] <- NA
+  china_us_export[china_us_export == "\t"] <- NA
+  china_us_import[china_us_import == "\t"] <- NA
+  
+
+  
+  ################################ Transform HS Codes to numeric Codes
+  
+  china_world_export$Commodity.code <- sapply(china_world_export$Commodity.code, as.numeric)
+  china_world_import$Commodity.code <- sapply(china_world_import$Commodity.code, as.numeric)
+  china_us_export$Commodity.code <- sapply(china_us_export$Commodity.code, as.numeric)
+  china_us_import$Commodity.code <- sapply(china_us_import$Commodity.code, as.numeric)
+  
+  china_us_export$Trading.partner.code <- sapply(china_us_export$Trading.partner.code , as.numeric)
+  china_us_import$Trading.partner.code  <- sapply(china_us_import$Trading.partner.code , as.numeric)
+  
+  ################################ Obtain codes that are corrupted
+  corrupted_world_export <- china_world_export[!is.na(china_world_export$X), ]
+  corrupted_world_import <- china_world_import[!is.na(china_world_import$X), ]
+  corrupted_us_export <- china_us_export[is.na(china_us_export$Trading.partner.code), ]
+  corrupted_us_import <- china_us_import[is.na(china_us_import$Trading.partner.code), ]
+  
+  corrupted_world_export <- unique(corrupted_world_export$Commodity.code)
+  corrupted_world_import <- unique(corrupted_world_import$Commodity.code)
+  corrupted_us_export <- unique(corrupted_us_export$Commodity.code)
+  corrupted_us_import <- unique(corrupted_us_import$Commodity.code)
+  
+  #These will be removed later in all instances - corrupted or not, from the final dataframes
+  
+  #Delete Rows that are corrupted
+  
+  china_world_export <- china_world_export[is.na(china_world_export$X), ] #Only keep rows that have an NA in the columnn "X"
+  china_world_export <- china_world_export[!is.na(china_world_export$Commodity.code), ] #Only keep rows in which the hs_code was able to be transformed to numeric
+
+  china_world_import <- china_world_import[is.na(china_world_import$X), ]
+  china_world_import <- china_world_import[!is.na(china_world_import$Commodity.code), ]
+  
+  china_us_export <- china_us_export[is.na(china_us_export$X), ]
+  china_us_export <- china_us_export[!is.na(china_us_export$Commodity.code), ]
+  china_us_export <- china_us_export[!is.na(china_us_export$Trading.partner.code), ]
+  
+  china_us_import <- china_us_import[is.na(china_us_import$X), ]
+  china_us_import <- china_us_import[!is.na(china_us_import$Commodity.code), ]
+  china_us_import <- china_us_import[!is.na(china_us_import$Trading.partner.code), ]
+  
+  
+  
+  #Quality Check (Can Month Indicator in form e.g. 201701 be converted to numeric without introducing NAs?)
+  #china_world_export$Date.of.data <- sapply(china_world_export$Date.of.data, as.numeric)
+  #china_world_import$Date.of.data <- sapply(china_world_import$Date.of.data, as.numeric)
+  #china_us_export$Date.of.data <- sapply(china_us_export$Date.of.data, as.numeric)
+  #china_us_import$Date.of.data <- sapply(china_us_import$Date.of.data, as.numeric)
+  
+  #Runs clear
+  
+  
+  
+  
+  
+  #Remove insignficant Colums
+  
+  china_world_import <- china_world_import[-c(5)]
+  china_world_export <- china_world_export[-c(5)]
+  china_us_import <- china_us_import[-c(4, 5, 7)]
+  china_us_export <- china_us_export[-c(4, 5, 7)]
+  
+  
+
+  #Pull Dimensions of the data
+  months <-  c("201701", "201702", "201703", "201704", "201705", "201706", "201707", "201708", "201709", "201710", "201711", "201712",
+                        "201801", "201802", "201803", "201804", "201805", "201806", "201807", "201808", "201809", "201810", "201811", "201812",
+                        "201901", "201902", "201903", "201904", "201905", "201906", "201907", "201908", "201909", "201910", "201911", "201912",
+                        "202001", "202002", "202003", "202004", "202005", "202006", "202007", "202008", "202009", "202010", "202011", "202012",
+                        "202101", "202102", "202103", "202104", "202105", "202106", "202107", "202108", "202109", "202110", "202111", "202112", 
+                        "202201", "202202", "202203", "202204", "202205", "202206")
+  
+  codes <- unique(china_world_import$Commodity.code)
+  codes2 <- unique(china_world_export$Commodity.code)
+  codes3 <- unique(china_us_import$Commodity.code)
+  codes4 <- unique(china_us_export$Commodity.code)
+
+  codes <- sapply(codes, as.numeric)
+  codes2 <- sapply(codes2, as.numeric)
+  codes3 <- sapply(codes3, as.numeric)
+  codes4 <- sapply(codes4, as.numeric)
+  
+  
+  
+  #Create Empty Dataframes
+  china_world_import_month <- data.frame(matrix(ncol = 66, nrow = length(codes)))
+  china_world_export_month <- data.frame(matrix(ncol = 66, nrow = length(codes2)))
+  china_us_import_month <- data.frame(matrix(ncol = 66, nrow = length(codes3)))
+  china_us_export_month <- data.frame(matrix(ncol = 66, nrow = length(codes4)))
+  
+  colnames(china_world_import_month) <- months
+  colnames(china_world_export_month) <- months
+  colnames(china_us_import_month) <- months
+  colnames(china_us_export_month) <- months
+  
+  rownames(china_world_import_month) <- codes
+  rownames(china_world_export_month) <- codes2
+  rownames(china_us_import_month) <- codes3
+  rownames(china_us_export_month) <- codes4
+  
+  
+  
+  #Fill in the dataframes - World Import
+  for (i in seq(1, nrow(china_world_import))){
+    hs_code <- as.character(china_world_import[i, 2])
+    date <- as.character(china_world_import[i, 1])
+    china_world_import_month[hs_code, date] <- china_world_import[i, 4]
+  }
+  
+  #Fill in the dataframes - World Export
+  for (i in seq(1, nrow(china_world_export))){
+    hs_code <- as.character(china_world_export[i, 2])
+    date <- as.character(china_world_export[i, 1])
+    china_world_export_month[hs_code, date] <- china_world_export[i, 4]
+  }
+  
+  #Fill in the dataframes - US Import
+  for (i in seq(1, nrow(china_us_import))){
+    hs_code <- as.character(china_us_import[i, 2])
+    date <- as.character(china_us_import[i, 1])
+    china_us_import_month[hs_code, date] <- china_us_import[i, 4]
+  }
+  
+  #Fill in the dataframes - US Export
+  for (i in seq(1, nrow(china_us_export))){
+    hs_code <- as.character(china_us_export[i, 2])
+    date <- as.character(china_us_export[i, 1])
+    china_us_export_month[hs_code, date] <- china_us_export[i, 4]
+  }
+  
+  #Fill in empty values with 0
+  china_world_import_month[is.na(china_world_import_month)] <- 0
+  china_world_export_month[is.na(china_world_export_month)] <- 0
+  china_us_import_month[is.na(china_us_import_month)] <- 0
+  china_us_export_month[is.na(china_us_export_month)] <- 0
+  
+  
+  #Reduce to quarterly data and remove all values that are empty in each row
+  #+Remove all values that are in 2022
+  
+  #Remove values from 2022
+  china_world_import_month <- china_world_import_month[, 1:60]
+  china_world_export_month <- china_world_export_month[, 1:60]
+  china_us_import_month <- china_us_import_month[, 1:60]
+  china_us_export_month <- china_us_export_month[, 1:60]
+  
+  #Convert Characters to numeric and remove commas
+  #China World Import
+  for (i in seq(1, nrow(china_world_import_month))){
+    china_world_import_month[i, ] <- as.numeric(gsub(",","",china_world_import_month[i, ]))
+  }
+  
+  #China World Export
+  for (i in seq(1, nrow(china_world_export_month))){
+    china_world_export_month[i, ] <- as.numeric(gsub(",","",china_world_export_month[i, ]))
+  }
+  
+  #China US Import
+  for (i in seq(1, nrow(china_us_import_month))){
+    china_us_import_month[i, ] <- as.numeric(gsub(",","",china_us_import_month[i, ]))
+
+  }
+  
+  #China US Export
+  for (i in seq(1, nrow(china_us_export_month))){
+    china_us_export_month[i, ] <- as.numeric(gsub(",","",china_us_export_month[i, ]))
+  }
+  #Convert to numeric again as it does not work above
+  china_world_import_month <- as.data.frame(sapply(china_world_import_month, as.numeric))
+  china_world_export_month <- as.data.frame(sapply(china_world_export_month, as.numeric))
+  china_us_import_month <- as.data.frame(sapply(china_us_import_month, as.numeric))
+  china_us_export_month <- as.data.frame(sapply(china_us_export_month, as.numeric))
+  
+  rownames(china_world_import_month) <- codes
+  rownames(china_world_export_month) <- codes2
+  rownames(china_us_import_month) <- codes3
+  rownames(china_us_export_month) <- codes4
+  
+  
+  #Remove all codes that have been corrupted
+  china_world_import_month <- china_world_import_month[!(rownames(china_world_import_month) %in% corrupted_world_import), ]
+  china_world_export_month <- china_world_export_month[!(rownames(china_world_export_month) %in% corrupted_world_export), ]
+  china_us_import_month <- china_us_import_month[!(rownames(china_us_import_month) %in% corrupted_us_import), ]
+  china_us_export_month <- china_us_export_month[!(rownames(china_us_export_month) %in% corrupted_us_export), ]
+  
+  
+  #Compute Quarterly data
+  quarters <- c("2017 Q1", "2017 Q2", "2017 Q3", "2017 Q4", "2018 Q1", "2018 Q2", "2018 Q3", "2018 Q4", "2019 Q1", "2019 Q2", "2019 Q3", "2019 Q4", "2020 Q1", "2020 Q2", "2020 Q3", "2020 Q4", "2021 Q1", "2021 Q2", "2021 Q3", "2021 Q4")
+  
+  #Create empty quarterly dataframes
+  china_world_import_quarters <- data.frame(matrix(ncol = 20, nrow = nrow(china_world_import_month)))
+  china_world_export_quarters <- data.frame(matrix(ncol = 20, nrow = nrow(china_world_export_month)))
+  china_us_import_quarters <- data.frame(matrix(ncol = 20, nrow = nrow(china_us_import_month)))
+  china_us_export_quarters <- data.frame(matrix(ncol = 20, nrow = nrow(china_us_export_month)))
+  
+  rownames(china_world_import_quarters) <- rownames(china_world_import_month)
+  rownames(china_world_export_quarters) <- rownames(china_world_export_month)
+  rownames(china_us_import_quarters) <- rownames(china_us_import_month)
+  rownames(china_us_export_quarters) <- rownames(china_us_export_month)
+  
+  
+  colnames(china_world_import_quarters) <- quarters
+  colnames(china_world_export_quarters) <- quarters
+  colnames(china_us_import_quarters) <- quarters
+  colnames(china_us_export_quarters) <- quarters
+  
+  
+  
+  #Fill up the data frames
+  
+  #China World Import
+  
+  for (i in seq(1, nrow(china_world_import_month))){ #Iterate through every Commodity
+    temp_row <- c(china_world_import_month[i, 1] + china_world_import_month[i, 2] + china_world_import_month[i, 3]) #Initialize vector with first quarter
+    
+    for (j in seq(4, 60, by = 3)){ #iterate through all months with a window of 3
+      temp_row <- append(temp_row, c(china_world_import_month[ i, j] + china_world_import_month[ i, j+1] + china_world_import_month[ i, j+2]))
+    }
+    china_world_import_quarters[i, ] <- temp_row
+  }
+  
+  #China World Export
+  
+  for (i in seq(1, nrow(china_world_export_month))){ #Iterate through every Commodity
+    temp_row <- c(china_world_export_month[i, 1] + china_world_export_month[i, 2] + china_world_export_month[i, 3]) #Initialize vector with first quarter
+    
+    for (j in seq(4, 60, by = 3)){ #iterate through all months with a window of 3
+      temp_row <- append(temp_row, c(china_world_export_month[ i, j] + china_world_export_month[ i, j+1] + china_world_export_month[ i, j+2]))
+    }
+    china_world_export_quarters[i, ] <- temp_row
+  }
+  
+  #China US Import
+  
+  for (i in seq(1, nrow(china_us_import_month))){ #Iterate through every Commodity
+    temp_row <- c(china_us_import_month[i, 1] + china_us_import_month[i, 2] + china_us_import_month[i, 3]) #Initialize vector with first quarter
+    
+    for (j in seq(4, 60, by = 3)){ #iterate through all months with a window of 3
+      temp_row <- append(temp_row, c(china_us_import_month[ i, j] + china_us_import_month[ i, j+1] + china_us_import_month[ i, j+2]))
+    }
+    china_us_import_quarters[i, ] <- temp_row
+  }
+  
+  #China US Export
+  
+  for (i in seq(1, nrow(china_us_export_month))){ #Iterate through every Commodity
+    temp_row <- c(china_us_export_month[i, 1] + china_us_export_month[i, 2] + china_us_export_month[i, 3]) #Initialize vector with first quarter
+    
+    for (j in seq(4, 60, by = 3)){ #iterate through all months with a window of 3
+      temp_row <- append(temp_row, c(china_us_export_month[ i, j] + china_us_export_month[ i, j+1] + china_us_export_month[ i, j+2]))
+    }
+    china_us_export_quarters[i, ] <- temp_row
+  }
+  
+  #Order dataframes
+  
+  china_world_import_quarters <- china_world_import_quarters[order(rownames(china_world_import_quarters)), ]
+  china_world_export_quarters <- china_world_export_quarters[order(rownames(china_world_export_quarters)), ]
+  china_us_import_quarters <- china_us_import_quarters[order(rownames(china_us_import_quarters)), ]
+  china_us_export_quarters <- china_us_export_quarters[order(rownames(china_us_export_quarters)), ]
+
+  #Write the modified data
+  write.csv2(china_world_import_quarters, "china_world_import_mod.csv")
+  write.csv2(china_world_export_quarters, "china_world_export_mod.csv")
+  write.csv2(china_us_import_quarters, "china_us_import_mod.csv")
+  write.csv2(china_us_export_quarters, "china_us_export_mod.csv")
+  
+  
+  
