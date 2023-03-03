@@ -1,0 +1,126 @@
+##Determine Concordance between HS_Codes from US and HS_Codes from Europe. Obtain a set of HS codes that are not-empty and present in both dataframes and are 
+relevant for common for-profit trade in goods. 
+#Although it is not specified in the code, I checked whether the codes I remove are relevant. I only had to eliminate 3 relevant codes --> Not otherwise specified Carboxylic Acids, Trade in Monetary Gold and Civilian Aircraft Engines 
+
+#Import Data
+
+eu_import_data <- read.csv2("C:/Users/nikan/OneDrive/Desktop/Trading_Data/R_Trading/Raw_EU_Trade/Modified_EU/eu_world_import_2d.csv", header = T)
+eu_export_data <- read.csv2("C:/Users/nikan/OneDrive/Desktop/Trading_Data/R_Trading/Raw_EU_Trade/Modified_EU/eu_world_export_2d.csv", header = T)
+
+eu_export_data <- eu_export_data[, 2:75]
+eu_import_data <- eu_import_data[, 2:75]
+  
+
+us_import_data <- read.csv2("C:/Users/nikan/OneDrive/Desktop/Trading_Data/R_Trading/Raw_US_Trade/Modified/us_world_import_2d.csv", header = T)
+us_export_data <- read.csv2("C:/Users/nikan/OneDrive/Desktop/Trading_Data/R_Trading/Raw_US_Trade/Modified/us_world_export_2d.csv", header = T)
+
+#Confirm identity of European HS Codes in US Data
+
+identity_import <- us_import_data$hs_codes %in% eu_import_data$num_codes
+identity_export <- us_export_data$hs_codes %in% eu_export_data$num_codes
+
+
+#Check for significant deviations (HS6 codes where goods transfer is registered)
+unidentical_import <- us_import_data[!identity_import, ]
+unidentical_export <- us_export_data[!identity_export, ]
+
+#Import
+sig_deviation_import <- c()
+
+for (i in seq(1, nrow(unidentical_import))){
+  sig_deviation_import <- append(sig_deviation_import, all(unidentical_import[i,3:74] == 0))
+}
+#Export
+sig_deviation_export <- c()
+
+for (i in seq(1, nrow(unidentical_export))){
+  sig_deviation_export <- append(sig_deviation_export, all(unidentical_export[i,3:74] == 0))
+}
+
+#Reduce US data to identical hs_codes
+#Imports
+us_import_identical <- us_import_data[identity_import, ]
+rownames(us_import_identical) <- NULL   # Reset Row-Indices
+
+
+
+#Exports
+us_export_identical <- us_export_data[identity_export, ]
+rownames(us_export_identical) <- NULL
+
+
+#Confirm Identity of residual US goods and EU HS6 codes
+
+identity_import_eu <- eu_import_data$num_codes %in% us_import_identical$hs_codes
+identity_export_eu <- eu_export_data$num_codes %in% us_export_identical$hs_codes
+
+#There a few goods in the EU set that are not in the US set but these are special codes
+#that do not correspond to standard trade goods (e.g. personal belongings of people transferring their residency ...)
+#These codes are removed from the eu set
+
+eu_import_data <- eu_import_data[identity_import_eu, ]
+eu_export_data <- eu_export_data[identity_export_eu, ]
+
+
+rownames(eu_import_data) <- NULL
+rownames(eu_export_data) <- NULL
+rownames(us_import_identical) <- NULL
+rownames(us_export_identical) <- NULL
+
+
+
+#Remove HSv12 and HSv22 codes
+#Function that flags potential empty HS17 codes
+
+hs_remover <- function(dataframe){
+  counter <- c()
+  for (i in seq(1, nrow(dataframe))){
+    if ((sum(dataframe[i, 9:68]) == 0.0000) & (sum(dataframe[i, 3:9]) != 0)){
+      counter = append(counter, TRUE)
+    }
+    else if ((sum(dataframe[i, 9:68]) == 0.0000) & (sum(dataframe[i, 69:74]) != 0)){
+      counter = append(counter, TRUE)
+    }
+    else{
+      counter = append(counter, FALSE)
+    }
+  }
+  return(counter)
+}
+
+#Get potential empty HS17 codes from all data
+eu_imp_index <- hs_remover(eu_import_data)
+eu_exp_index <- hs_remover(eu_export_data)
+us_imp_index <- hs_remover(us_import_identical)
+us_exp_index <- hs_remover(us_export_identical)
+
+
+#Check them against one another
+consensus <- cbind(eu_import_data$num_codes, eu_imp_index, eu_exp_index, us_imp_index, us_exp_index)
+consensus <- data.frame(consensus)
+
+#Identify shared empty HS17 codes
+odd_hs_codes <- c()
+for (i in seq(1, nrow(consensus))){
+  if (sum(consensus[i, 2:5]) == 4)
+    odd_hs_codes <- append(odd_hs_codes, consensus[i, 1]) 
+}
+
+#Remmove shared empty HS17 codes from the dataframes
+
+eu_import_data <- eu_import_data[!(eu_import_data$num_codes %in% odd_hs_codes), ]
+eu_export_data <- eu_export_data[!(eu_export_data$num_codes %in% odd_hs_codes), ]
+us_import_identical <- us_import_identical[!(us_import_identical$hs_codes %in% odd_hs_codes), ]
+us_export_identical <- us_export_identical[!(us_export_identical$hs_codes %in% odd_hs_codes), ]
+
+hs6_frame <- data.frame(matrix(ncol = 20, nrow = 5405))
+colnames(hs6_frame) <- c("2017 Q1", "2017 Q2", "2017 Q3", "2017 Q4", "2018 Q1", "2018 Q2", "2018 Q3", "2018 Q4", "2019 Q1", "2019 Q2", "2019 Q3", "2019 Q4", "2020 Q1", "2020 Q2", "2020 Q3", "2020 Q4", "2021 Q1", "2021 Q2", "2021 Q3", "2021 Q4")
+rownames(hs6_frame) <- eu_import_data$num_codes
+
+#Add Descriptive Labels to the frame
+
+#Export consensus hs6 codes
+
+
+write.csv2(hs6_frame, "hs6_frame.csv") #Save consensus codes for processing in HS6_Code-Sorting
+
