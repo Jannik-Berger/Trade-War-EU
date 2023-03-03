@@ -1,0 +1,864 @@
+#This document is taking data on US Section 301, 232, 201 and MFN data as well as
+#Chinese Retalliation tariffs on the US and MFN tariffs and format them into a matrix
+#with quarterly data on tariffs for each investigated HS6 code
+#5 matrices are to be obtained 
+#To do this I load data on the tariffs, work in exclusions, reduce them to HS6 codes and add the MFN rates to the tariffs
+
+#1) The Tariffs raised on Chinese Imports from the US as described in Section 301, 232, 201 and MFN
+#2) The Tariffs raised on European Imports from the US as desxcribed in Section 301(airbus dispute), 232 201 and MFN
+#3) The Tariffs raised on RoW from the US as described with MFN tariffs, 232 and 201 tariffs
+#4) The Tariffs raised on US Imports from China in retaliation of Section 301 and 232 US tariffs
+#5) The Tariffs raised on RoW and Europe from China arising from the MFN rates
+
+#Load Data
+tariffs_us <- read.csv2("C:/Users/nikan/OneDrive/Desktop/Trading_Data/Tarif_Data/tarif_data_US_ult.csv", header = T)
+tariffs_exclusions_301 <- read.csv2("C:/Users/nikan/OneDrive/Desktop/Trading_Data/Tarif_Data/exclusions_us.csv", header = T)
+tariffs_airbus <- read.csv2("C:/Users/nikan/OneDrive/Desktop/Trading_Data/Tarif_Data/tarif_data_airbus.csv", header = T)
+#Reduce to relevant data
+
+tariffs_us <- tariffs_us[1:18027, ]
+tariffs_us <- tariffs_us[-c(3)]
+
+tariffs_us[, 3:14] <- as.data.frame(lapply(tariffs_us[, 3:14], as.numeric))
+
+##Expand to monthly table
+#Create Dataframe with empty values
+quarters <- c("2016 Q3", "2016 Q4", "2017 Q1", "2017 Q2", "2017 Q3", "2017 Q4", "2018 Q1", "2018 Q2", "2018 Q3", "2018 Q4", "2019 Q1", "2019 Q2", "2019 Q3", "2019 Q4", "2020 Q1", "2020 Q2", "2020 Q3", "2020 Q4", "2021 Q1", "2021 Q2", "2021 Q3", "2021 Q4", "2022 Q1", "2022 Q2")
+months <- c("201701", "201702", "201703", "201704", "201705", "201706", "201707", "201708", "201709", "201710", "201711", "201712",
+            "201801", "201802", "201803", "201804", "201805", "201806", "201807", "201808", "201809", "201810", "201811", "201812",
+            "201901", "201902", "201903", "201904", "201905", "201906", "201907", "201908", "201909", "201910", "201911", "201912",
+            "202001", "202002", "202003", "202004", "202005", "202006", "202007", "202008", "202009", "202010", "202011", "202012",
+            "202101", "202102", "202103", "202104", "202105", "202106", "202107", "202108", "202109", "202110", "202111", "202112")
+
+
+empty_df <- data.frame(matrix(ncol = 60, nrow = 18027))
+
+colnames(empty_df) <- c(months)
+rownames(empty_df) <- c(tariffs_us[, 1])
+
+tariffs_us_cn <- empty_df
+tariffs_us_cn[is.na(tariffs_us_cn)] <- 0
+
+tariffs_exclusions_301 <- tariffs_exclusions_301[1:1588, 1:8]  
+
+#Filling up the dataframe
+for (i in seq(1, nrow(tariffs_us))){
+  tariffs_us_cn[i, 14:60] <- tariffs_us[i, 3]   #Feb 18, 201 Initiation
+  
+  tariffs_us_cn[i, 15:60] <- tariffs_us[i, 4] + tariffs_us_cn[i, 15]  #Mar 18, 232 Initiation
+  
+  tariffs_us_cn[i, 19:60] <- tariffs_us[i, 5] + tariffs_us_cn[i, 19] #Jul 18, 301 List 1 Initiation
+  
+  tariffs_us_cn[i, 20:60] <- tariffs_us[i, 6] + tariffs_us_cn[i, 20] #Aug 18, 301 List 2 Initiation
+  
+  tariffs_us_cn[i, 21:60] <- tariffs_us[i, 7] + tariffs_us_cn[i, 21]  #Sep 18, 301 List 3 Initiation
+  
+  tariffs_us_cn[i, 26:60] <- tariffs_us[i, 8] + tariffs_us_cn[i, 26]  #Feb 19, 201 tariff reduction No. 1
+  
+  tariffs_us_cn[i, 30:60] <- tariffs_us[i, 9] + tariffs_us_cn[i, 30] #Jun 19, List 3 Tariff Increase from 10 to 25 %
+  
+  tariffs_us_cn[i, 33:60] <- tariffs_us[i, 10] + tariffs_us_cn[i, 33] #Sep 19, List 4A Initiation
+  
+  tariffs_us_cn[i, 38:60] <- tariffs_us[i, 11] + tariffs_us_cn[i, 38]  #Feb 20, 201 reduction No. 2
+  
+  tariffs_us_cn[i, 38:60] <- tariffs_us[i, 12] + tariffs_us_cn[i, 38] #Feb 20, Extension of 232 with amendments
+  
+  tariffs_us_cn[i, 38:60] <- tariffs_us[i, 13] + tariffs_us_cn[i, 38] #Feb 20, Phase 1 Agreement, List4A rates drop to 7.5 per cent
+  
+  tariffs_us_cn[i, 50:60] <- tariffs_us[i, 14] + tariffs_us_cn[i, 50] #Feb 21, 201 reduction No. 3
+}
+
+########Work in the 301 Exclusions
+#Reduce to relevant data
+tariffs_exclusions_301 <- tariffs_exclusions_301[1:1588, 1:8]
+tariffs_exclusions_301 <- tariffs_exclusions_301[-c(4, 5, 6)]
+
+####Convert dates to numerical
+#Drop days of Dates 
+
+for (i in seq(1, nrow(tariffs_exclusions_301))){
+  tariffs_exclusions_301[i, 3] <- substr(tariffs_exclusions_301[i, 3], 5, 10)
+  tariffs_exclusions_301[i, 4] <- substr(tariffs_exclusions_301[i, 4], 5, 10)
+}
+library("hash")
+h_months <- hash("Jan" = "01" ,"Feb" = "02", "Mrz"= "03", "Apr"= "04","Mai"= "05", "Jun"= "06",
+                 "Jul" = "07", "Aug" = "08", "Sep"="09", "Okt"="10", "Nov"="11", "Dez"="12")
+
+#Recode dates
+for (i in seq(1, nrow(tariffs_exclusions_301))){
+  year_3 <- paste0("20", substr(tariffs_exclusions_301[i, 3], 5, 6))
+  month_3 <- h_months[[substr(tariffs_exclusions_301[i, 3], 1, 3)]]
+  tariffs_exclusions_301[i, 3] <- paste0(year_3, month_3)
+  
+  year_4 <- paste0("20", substr(tariffs_exclusions_301[i, 4], 5, 6))
+  month_4 <- h_months[[substr(tariffs_exclusions_301[i, 4], 1, 3)]]
+  tariffs_exclusions_301[i, 4] <- paste0(year_4, month_4)
+}
+
+#Dealing with duplicates
+
+#Sort Original Dataframe by HS10 Codes
+
+tariffs_exclusions_301 <- tariffs_exclusions_301[order(tariffs_exclusions_301$HS10), ]
+rownames(tariffs_exclusions_301) <- NULL
+
+#Extend the time period for duplicated values
+
+for (i in seq(2, nrow(tariffs_exclusions_301))){
+  if (tariffs_exclusions_301[i-1, 2] == tariffs_exclusions_301[i, 2]){ #Check if the HS code is duplicated
+    
+    if (tariffs_exclusions_301[i-1, 3] <= tariffs_exclusions_301[i, 3]){  #Give all duplicates the earliest exclusion initiation date
+      tariffs_exclusions_301[i, 3] <- tariffs_exclusions_301[i-1, 3]
+    } 
+    if (tariffs_exclusions_301[i-1, 3] > tariffs_exclusions_301[i, 3]){   
+      tariffs_exclusions_301[i-1, 3] <- tariffs_exclusions_301[i, 3]
+    }
+    
+    if (tariffs_exclusions_301[i-1, 4] <= tariffs_exclusions_301[i, 4]){ #Give all duplicates the latest exclusion end date
+      tariffs_exclusions_301[i-1, 4] <- tariffs_exclusions_301[i, 4]
+    }
+    if (tariffs_exclusions_301[i-1,4] > tariffs_exclusions_301[i, 4]){
+      tariffs_exclusions_301[i, 4] <- tariffs_exclusions_301[i-1,4]
+    }
+    if (tariffs_exclusions_301[i-1, 5] != tariffs_exclusions_301[i, 5]){ #Make sure that extension flag is given if active in one of the duplicates
+      tariffs_exclusions_301[i-1, 5] <- 1
+      tariffs_exclusions_301[i, 5] <- 1
+    }
+  }
+  
+}
+#Delete all but the last instance of duplicated values
+
+delete_index <- c()
+for (i in seq(2, nrow(tariffs_exclusions_301))){
+  if (tariffs_exclusions_301[i, 2] == tariffs_exclusions_301[i-1, 2]){
+    delete_dummy <- c(i-1)
+    delete_index <- append(delete_index, delete_dummy)
+  }
+}
+
+
+tariffs_exclusions_301 <- tariffs_exclusions_301[-delete_index, ]  #Make the deletion
+
+
+#Order Exclusions by Lists
+tariffs_exclusions_301 <- tariffs_exclusions_301[order(tariffs_exclusions_301$Announcement), ]
+rownames(tariffs_exclusions_301) <- NULL
+
+#Change the end of exclusions that expire after Dec 2021 to Dec 2021 (Period of investigation ends in Dec 21)
+tariffs_exclusions_301["extend_end_date"][tariffs_exclusions_301["extend_end_date"] == "202203"] <- "202112"
+
+ 
+
+#Work in the List 1 Exclusions
+list1_ex <- tariffs_exclusions_301[15:382, ]
+list1_ex <- rbind(list1_ex, tariffs_exclusions_301[12, ]) # Add Covid Exclusions
+
+
+for (i in seq(1, nrow(list1_ex))){
+  if (list1_ex$extend_flag[i] == 0){   #In this case the exclusion runs out after one year
+    start <- list1_ex$ini_pub_date[i] #Get Start date of extension
+    year_counter <- as.numeric(substr(start, 3, 4)) #Compute End Date
+    year_counter_end <- as.character(year_counter + 1)
+    end <- paste0("20", year_counter_end, substr(start, 5, 6))
+  }
+  if (list1_ex$extend_flag[i] == 1){ #In this case the exclusion was extended until a specific date
+    start <- list1_ex$ini_pub_date[i]
+    end <- list1_ex$extend_end_date[i] #Pull specific end date
+  }
+  #Select Columns and Rows that are supposed to change
+  start_col <- which(colnames(tariffs_us_cn) == start) #Select column of initial date of exclusion
+  end_col <- which(colnames(tariffs_us_cn) == end) #Select column of end of exclusion
+  code <- which(rownames(tariffs_us_cn) == list1_ex[i, 2]) #Select code that gets excluded
+  
+  for (j in seq(start_col, end_col)){
+    tariffs_us_cn[code, j] <- tariffs_us_cn[code, j] - 25 #Apply the exclusion to all elements in the specified range of months
+  }
+  
+}
+
+#Work in the List 2 Exclusions
+list2_ex <- tariffs_exclusions_301[383:482, ]
+list2_ex <- rbind(list2_ex, tariffs_exclusions_301[13:14, ]) # Add Covid Exclusions
+
+
+for (i in seq(1, nrow(list2_ex))){
+  if (list2_ex$extend_flag[i] == 0){   #In this case the exclusion runs out after one year
+    start <- list2_ex$ini_pub_date[i] #Get Start date of extension
+    year_counter <- as.numeric(substr(start, 3, 4)) #Compute End Date
+    year_counter_end <- as.character(year_counter + 1)
+    end <- paste0("20", year_counter_end, substr(start, 5, 6))
+  }
+  if (list2_ex$extend_flag[i] == 1){ #In this case the exclusion was extended until a specific date
+    start <- list2_ex$ini_pub_date[i]
+    end <- list2_ex$extend_end_date[i] #Pull specific end date
+  }
+  #Select Columns and Rows that are supposed to change
+  start_col <- which(colnames(tariffs_us_cn) == start) #Select column of initial date of exclusion
+  end_col <- which(colnames(tariffs_us_cn) == end) #Select column of end of exclusion
+  code <- which(rownames(tariffs_us_cn) == list2_ex[i, 2]) #Select code that gets excluded
+  
+  for (j in seq(start_col, end_col)){
+    tariffs_us_cn[code, j] <- tariffs_us_cn[code, j] - 25 #Apply the exclusion to all elements in the specified range of months
+  }
+  
+}
+
+#Work in the List 3 Exclusions
+
+list3_ex <- tariffs_exclusions_301[483:1059, ]
+list3_ex <- rbind(list3_ex, tariffs_exclusions_301[1:5, ]) # Add Covid Exclusions
+
+
+for (i in seq(1, nrow(list3_ex))){
+  if (list3_ex$extend_flag[i] == 0){   #In this case the exclusion runs out after one year
+    start <- list3_ex$ini_pub_date[i] #Get Start date of extension
+    year_counter <- as.numeric(substr(start, 3, 4)) #Compute End Date
+    year_counter_end <- as.character(year_counter + 1)
+    end <- paste0("20", year_counter_end, substr(start, 5, 6))
+  }
+  if (list3_ex$extend_flag[i] == 1){ #In this case the exclusion was extended until a specific date
+    start <- list3_ex$ini_pub_date[i]
+    end <- list3_ex$extend_end_date[i] #Pull specific end date
+  }
+  #Select Columns and Rows that are supposed to change
+  start_col <- which(colnames(tariffs_us_cn) == start) #Select column of initial date of exclusion
+  end_col <- which(colnames(tariffs_us_cn) == end) #Select column of end of exclusion
+  code <- which(rownames(tariffs_us_cn) == list3_ex[i, 2]) #Select code that gets excluded
+  
+  #Here the code has to be adapted a bit as in List 3 the tariff was raised from 10 to 25 % on Jun 19
+  # the List3 tariffs were raised from 10 to 25 %
+  list3_tariff <- 10
+  for (j in seq(start_col, end_col)){
+    if (j >= 30){
+      list3_tariff <- 25
+    }
+    tariffs_us_cn[code, j] <- tariffs_us_cn[code, j] - list3_tariff #Apply the exclusion to all elements in the specified range of months
+    
+  }
+  
+}
+
+#Work in the List 4A Exclusions
+
+list4_ex <- tariffs_exclusions_301[1060:1196, ]
+list4_ex <- rbind(list4_ex, tariffs_exclusions_301[6:11, ]) # Add Covid Exclusions
+
+for (i in seq(1, nrow(list4_ex))){
+  if (list4_ex$extend_flag[i] == 0){   #In this case the exclusion runs out after one year
+    start <- list4_ex$ini_pub_date[i] #Get Start date of extension
+    year_counter <- as.numeric(substr(start, 3, 4)) #Compute End Date
+    year_counter_end <- as.character(year_counter + 1)
+    end <- paste0("20", year_counter_end, substr(start, 5, 6))
+  }
+  if (list4_ex$extend_flag[i] == 1){ #In this case the exclusion was extended until a specific date
+    start <- list4_ex$ini_pub_date[i]
+    end <- list4_ex$extend_end_date[i] #Pull specific end date
+  }
+  #Select Columns and Rows that are supposed to change
+  start_col <- which(colnames(tariffs_us_cn) == start) #Select column of initial date of exclusion
+  end_col <- which(colnames(tariffs_us_cn) == end) #Select column of end of exclusion
+  code <- which(rownames(tariffs_us_cn) == list4_ex[i, 2]) #Select code that gets excluded
+  
+  #Analogously the code has to be adapted, as in Feb 20, the List 4A tariffs dropped form 15 to 7.5 %
+  list4_tariff <- 15
+  for (j in seq(start_col, end_col)){
+    if (j >= 38){
+      list4_tariff <- 7.5
+    }
+    tariffs_us_cn[code, j] <- tariffs_us_cn[code, j] - list4_tariff #Apply the exclusion to all elements in the specified range of months
+    
+  }
+}
+
+
+
+
+
+#Now the Tariff data has to be reduced to HS6 codes. I collaps the HS10 codes to their HS6 subheadings and compute mean tariff rates for the 
+#complete subheading
+
+hs_10 <- as.numeric(rownames(tariffs_us_cn))
+tariffs_us_cn <- cbind(hs_10, tariffs_us_cn)
+
+hs_6 <- sapply(tariffs_us_cn$hs_10, function(x) as.integer(x/10000))
+
+tariffs_us_cn$hs_10 <- hs_6
+
+#Compute Average Tariff for each month for each hs_6 subheading
+
+#Create New Dataframe with HS6 Codes
+tariffs_us_cn_hs6 <- data.frame(matrix(ncol = 60, nrow = 5292))
+colnames(tariffs_us_cn_hs6) <- months
+rownames(tariffs_us_cn_hs6) <- unique(hs_6)
+
+#Compute average tariffs for HS6 Codes
+#Add dummy row so for loop does not run out of bond
+
+tariffs_us_cn[nrow(tariffs_us_cn)+1, ] <- seq(1:61)
+
+#Start Mean computation
+counter = 0
+for (i in seq(1, nrow(tariffs_us_cn)-1)){ #Iterate through all columns
+  
+  if (tariffs_us_cn$hs_10[i] == tariffs_us_cn$hs_10[i+1]){ #Iterate so long until a point is reached where now successive duplicate occurs
+    counter <- counter + 1
+  }
+  
+  if (tariffs_us_cn$hs_10[i] != tariffs_us_cn$hs_10[i+1]){#Index on which no more duplicate occurs
+    code <- as.character(tariffs_us_cn$hs_10[i])  #Obtain respective HS_6 Code
+    
+    upper_index <- i-counter #Get Upper index of duplicated hs
+    
+    tariffs_us_cn_hs6[code, ] <- as.numeric(sapply(tariffs_us_cn[upper_index:i, 2:61], mean))
+    
+    
+    counter = 0
+  }
+  
+}
+
+ 
+######## Section2 - US Tariffs - EU Tarif
+
+#Reduce to relevant data
+
+tariffs_us_eu <- tariffs_us[-c(5, 6, 7, 9, 10, 13)]
+
+#Create empty dataframe for monthly data
+
+tariffs_us_eu_month <- data.frame(matrix(ncol = 60, nrow = 18027))
+
+colnames(tariffs_us_eu_month) <- c(months)
+rownames(tariffs_us_eu_month) <- c(tariffs_us[, 1])
+
+
+tariffs_us_eu_month[is.na(tariffs_us_eu_month)] <- 0
+
+#Expand Tariff data to monthly matrix
+
+#Filling up the dataframe
+for (i in seq(1, nrow(tariffs_us))){
+  tariffs_us_eu_month[i, 14:60] <- tariffs_us_eu[i, 3]   #Feb 18, 201 Initiation
+  
+  tariffs_us_eu_month[i, 18:60] <- tariffs_us_eu[i, 4] + tariffs_us_eu_month[i, 18]  #JUn 18, 232 Initiation (EU exempted in March)
+  
+  tariffs_us_eu_month[i, 26:60] <- tariffs_us_eu[i, 5] + tariffs_us_eu_month[i, 26]  #Feb 19, 201 tariff reduction No. 1
+  
+  tariffs_us_eu_month[i, 38:60] <- tariffs_us_eu[i, 6] + tariffs_us_eu_month[i, 38]  #Feb 20, 201 reduction No. 2
+  
+  tariffs_us_eu_month[i, 38:60] <- tariffs_us_eu[i, 7] + tariffs_us_eu_month[i, 38] #Feb 20, Extension of 232 with amendments
+  
+  tariffs_us_eu_month[i, 50:60] <- tariffs_us_eu[i, 8] + tariffs_us_eu_month[i, 50] #Feb 21, 201 reduction No. 3
+}
+
+#Work in the 301(airbus conflict) tariffs. These are only available at HS8 so the codes are first collapsed to HS8 in the same
+#manner as they were collapsed to hs6 with the chinese 301 tariffs
+
+tariffs_us_eu_month<- cbind(hs_10, tariffs_us_eu_month)
+
+hs_8 <- sapply(tariffs_us_eu_month$hs_10, function(x) as.integer(x/100))
+
+tariffs_us_eu_month$hs_10 <- hs_8
+
+#Create New Dataframe with HS8 Codes
+tariffs_us_eu_hs8 <- data.frame(matrix(ncol = 60, nrow = 10711))
+colnames(tariffs_us_eu_hs8) <- months
+rownames(tariffs_us_eu_hs8) <- unique(hs_8)
+
+#Compute average tariffs for HS8 Codes
+#Add dummy row so for loop does not run out of bound
+
+tariffs_us_eu_month[nrow(tariffs_us_eu_month)+1, ] <- seq(1:61)
+
+#Start Mean computation
+counter = 0
+for (i in seq(1, nrow(tariffs_us_eu_month)-1)){ #Iterate through all columns
+  
+  if (tariffs_us_eu_month$hs_10[i] == tariffs_us_eu_month$hs_10[i+1]){ #Iterate so long until a point is reached where now successive duplicate occurs
+    counter <- counter + 1
+  }
+  
+  if (tariffs_us_eu_month$hs_10[i] != tariffs_us_eu_month$hs_10[i+1]){#Index on which no more duplicate occurs
+    code <- as.character(tariffs_us_eu_month$hs_10[i])  #Obtain respective HS_6 Code
+    
+    upper_index <- i-counter #Get Upper index of duplicated hs
+    
+    tariffs_us_eu_hs8[code, ] <- as.numeric(sapply(tariffs_us_eu_month[upper_index:i, 2:61], mean))
+    
+    
+    counter = 0
+  }
+  
+}
+######Work in Aribus Section 301 Conflict Tariffs
+
+for (i in seq(1, nrow(tariffs_airbus))){
+  code <- as.character(tariffs_airbus$hs_codes[i])
+  
+  tariffs_us_eu_hs8[code, 34:60] <- tariffs_us_eu_hs8[code, 34:60] + tariffs_airbus[i, 2] # Oct 19, Initiation of 301 Section
+  
+  tariffs_us_eu_hs8[code, 39:60] <- tariffs_us_eu_hs8[code, 39:60] + tariffs_airbus[i, 3] # March 20, First Amendment of 301 Section
+  
+  tariffs_us_eu_hs8[code, 49:60] <- tariffs_us_eu_hs8[code, 49:60] + tariffs_airbus[i, 4] # Jan 21, Second Amendment of 301 Section
+  
+  tariffs_us_eu_hs8[code, 51:60] <- tariffs_us_eu_hs8[code, 51:60] + tariffs_airbus[i, 5] # Mar 21, Abolition of 301 Section
+}
+  
+########Collaps the european tariffs to   HS 6
+tariffs_us_eu_hs8 <- tariffs_us_eu_hs8[1:10711, ]
+tariffs_us_eu_hs8<- cbind(unique(hs_8), tariffs_us_eu_hs8)
+
+hs_6 <- sapply(tariffs_us_eu_hs8$`unique(hs_8)`,  function(x) as.integer(x/100))
+
+tariffs_us_eu_hs8$`unique(hs_8)` <- hs_6
+
+#Create empty dataframe again
+
+tariffs_us_eu_hs6 <- data.frame(matrix(ncol = 60, nrow = 5292))
+colnames(tariffs_us_eu_hs6) <- months
+rownames(tariffs_us_eu_hs6) <- unique(hs_6)
+
+#Create dummy so loop does not run out of bound
+tariffs_us_eu_hs8[nrow(tariffs_us_eu_hs8)+1, ] <- seq(1:61)
+
+#Start Mean computation
+counter = 0
+for (i in seq(1, nrow(tariffs_us_eu_hs8)-1)){ #Iterate through all columns
+  
+  if (tariffs_us_eu_hs8$`unique(hs_8)`[i] == tariffs_us_eu_hs8$`unique(hs_8)`[i+1]){ #Iterate so long until a point is reached where now successive duplicate occurs
+    counter <- counter + 1
+  }
+  
+  if (tariffs_us_eu_hs8$`unique(hs_8)`[i] != tariffs_us_eu_hs8$`unique(hs_8)`[i+1]){#Index on which no more duplicate occurs
+    code <- as.character(tariffs_us_eu_hs8$`unique(hs_8)`[i])  #Obtain respective HS_6 Code
+    
+    upper_index <- i-counter #Get Upper index of duplicated hs
+    
+    tariffs_us_eu_hs6[code, ] <- as.numeric(sapply(tariffs_us_eu_hs8[upper_index:i, 2:61], mean))
+    
+    
+    counter = 0
+  }
+  
+}
+
+
+######## Section 3 - US Tariffs - RoW Tarif  --> Several modifications exist for specific countries (e.g. Brasil is exempted from 232 Tariffs as they agreed to quotas)
+#The tariffs here are the "standard" specifications of Section 201 and 232 
+#Reduce to relevant data
+
+tariffs_row <- tariffs_us[-c(5, 6, 7, 9, 10, 13)]
+
+#Create empty dataframe for monthly data
+
+tariffs_us_row <- data.frame(matrix(ncol = 60, nrow = 18027))
+
+colnames(tariffs_us_row) <- c(months)
+rownames(tariffs_us_row) <- c(tariffs_us[, 1])
+
+
+tariffs_us_row[is.na(tariffs_us_row)] <- 0
+
+#Expand Tariff data to monthly matrix
+
+#Filling up the dataframe
+for (i in seq(1, nrow(tariffs_us))){
+  tariffs_us_row[i, 14:60] <- tariffs_row[i, 3]   #Feb 18, 201 Initiation
+  
+  tariffs_us_row[i, 15:60] <- tariffs_row[i, 4] + tariffs_us_row[i, 15]  #Mar 18, 232 Initiation 
+  
+  tariffs_us_row[i, 26:60] <- tariffs_row[i, 5] + tariffs_us_row[i, 26]  #Feb 19, 201 tariff reduction No. 1
+  
+  tariffs_us_row[i, 38:60] <- tariffs_row[i, 6] + tariffs_us_row[i, 38]  #Feb 20, 201 reduction No. 2
+  
+  tariffs_us_row[i, 38:60] <- tariffs_row[i, 7] + tariffs_us_row[i, 38] #Feb 20, Extension of 232 with amendments
+  
+  tariffs_us_row[i, 50:60] <- tariffs_row[i, 8] + tariffs_us_row[i, 50] #Feb 21, 201 reduction No. 3
+}
+
+#####Collaps to HS6 codes
+
+
+tariffs_us_row <- cbind(hs_8, tariffs_us_row)
+tariffs_us_row$hs_8 <- sapply(tariffs_us_row$hs_8, function(x) as.integer(x/100))
+                              
+#Compute Average Tariff for each month for each hs_6 subheading
+
+#Create New Dataframe with HS6 Codes
+tariffs_us_row_hs6 <- data.frame(matrix(ncol = 60, nrow = 5292))
+colnames(tariffs_us_row_hs6) <- months
+rownames(tariffs_us_row_hs6) <- unique(hs_6)
+
+#Compute average tariffs for HS6 Codes
+#Add dummy row so for loop does not run out of bond
+
+tariffs_us_row[nrow(tariffs_us_row)+1, ] <- seq(1:61)
+
+#Start Mean computation
+counter = 0
+for (i in seq(1, nrow(tariffs_us_row)-1)){ #Iterate through all columns
+  
+  if (tariffs_us_row$hs_8[i] == tariffs_us_row$hs_8[i+1]){ #Iterate so long until a point is reached where now successive duplicate occurs
+    counter <- counter + 1
+  }
+  
+  if (tariffs_us_row$hs_8[i] != tariffs_us_row$hs_8[i+1]){#Index on which no more duplicate occurs
+    code <- as.character(tariffs_us_row$hs_8[i])  #Obtain respective HS_6 Code
+    
+    upper_index <- i-counter #Get Upper index of duplicated hs
+    
+    tariffs_us_row_hs6[code, ] <- as.numeric(sapply(tariffs_us_row[upper_index:i, 2:61], mean))
+    
+    
+    counter = 0
+  }
+  
+}
+
+rm("list1_ex", "list2_ex", "list3_ex", "list4_ex", "h_months", "empty_df", "code", "counter", "delete_dummy", 
+   "delete_index", "end", "end_col", "hs_10", "i", "j", "list3_tariff", "list4_tariff", "month_3", "month_4", 
+   "start", "start_col", "upper_index", "year_3", "year_4", "year_counter", "year_counter_end")
+##############US Tarif data as specified under Trade Sections 301, 232 and 201  DONE. Now the MFN data that was obtained from
+############## Trade Access Map from 2017 to 2021 and transformed into monthly data has to be added to the obtained data frames
+
+us_mfn <- read.csv2("us_mfn_ult.csv", header = T)
+
+colnames(us_mfn) <-  c("hs_codes", "201701", "201702", "201703", "201704", "201705", "201706", "201707", "201708", "201709", "201710", "201711", "201712",
+                                "201801", "201802", "201803", "201804", "201805", "201806", "201807", "201808", "201809", "201810", "201811", "201812",
+                                "201901", "201902", "201903", "201904", "201905", "201906", "201907", "201908", "201909", "201910", "201911", "201912",
+                                "202001", "202002", "202003", "202004", "202005", "202006", "202007", "202008", "202009", "202010", "202011", "202012",
+                                "202101", "202102", "202103", "202104", "202105", "202106", "202107", "202108", "202109", "202110", "202111", "202112")
+
+
+rownames(us_mfn) <- us_mfn$hs_codes
+us_mfn[, 2:61][us_mfn[, 2:61] > 100 ] <- (us_mfn[, 2:61][us_mfn[, 2:61] > 100])/100 #In some few products the MFN tariff was unreasonably high( > 100%), 
+                                                                                    #probably because of a comma slip in the compiled data from MA Database. 
+                                                                                    #This is accounted for in this line
+
+
+consensus <- us_mfn$hs_codes %in% rownames(tariffs_us_cn_hs6)
+
+us_mfn <- us_mfn[consensus, ]
+
+us_mfn[is.na(us_mfn)] <- 0
+#Add MFN Tariff rates to each tariff dataframe
+
+for (i in seq(1, nrow(us_mfn))){
+  code <- as.character(us_mfn$hs_codes[i])
+  
+  tariffs_us_cn_hs6[code, ] <- as.numeric(tariffs_us_cn_hs6[code, ]) + as.numeric(us_mfn[i, 2:61])
+  
+  tariffs_us_eu_hs6[code, ] <- as.numeric(tariffs_us_eu_hs6[code, ]) + as.numeric(us_mfn[i, 2:61])
+  
+  tariffs_us_row_hs6[code, ] <- as.numeric(tariffs_us_row_hs6[code, ]) + as.numeric(us_mfn[i, 2:61])
+}
+
+
+#####Section 4 - Compute the Chinese US Tariff
+
+#Load Data
+
+tariffs_cn <- read.csv2("C:/Users/nikan/OneDrive/Desktop/Trading_Data/Tarif_Data/tarif_data_china.csv", header = T)
+
+tariffs_exclusions_cn <- read.csv2("C:/Users/nikan/OneDrive/Desktop/Trading_Data/Tarif_Data/exclusions_china.csv", header = T)
+
+
+#Reduce to relevant data 
+
+tariffs_cn <- tariffs_cn[1:8557, ]
+
+tariffs_exclusions_cn <- tariffs_exclusions_cn[1:159, 1:3]
+
+tariffs_cn <- tariffs_cn[order(tariffs_cn$hs08), ]
+tariffs_exclusions_cn <- tariffs_exclusions_cn[order(tariffs_exclusions_cn$HS08), ]
+
+rownames(tariffs_cn) <- NULL
+rownames(tariffs_exclusions_cn) <- NULL
+
+tariffs_cn <- tariffs_cn[-c(3,5,6,10,11,14,16,18,19)]
+
+tariffs_cn[, 3:10] <- as.data.frame(lapply(tariffs_cn[, 3:10], as.numeric))
+tariffs_cn[is.na(tariffs_cn)] <- 0
+#Remove MFN Rates   
+
+
+
+
+#Expand to monthly data
+#Create New Dataframe
+tariffs_cn_us <- data.frame(matrix(ncol = 60, nrow = 8557))
+
+months <- c("201701", "201702", "201703", "201704", "201705", "201706", "201707", "201708", "201709", "201710", "201711", "201712",
+                      "201801", "201802", "201803", "201804", "201805", "201806", "201807", "201808", "201809", "201810", "201811", "201812",
+                      "201901", "201902", "201903", "201904", "201905", "201906", "201907", "201908", "201909", "201910", "201911", "201912",
+                      "202001", "202002", "202003", "202004", "202005", "202006", "202007", "202008", "202009", "202010", "202011", "202012",
+                      "202101", "202102", "202103", "202104", "202105", "202106", "202107", "202108", "202109", "202110", "202111", "202112")
+
+tariffs_cn_us[is.na(tariffs_cn_us)] <- 0
+tariffs_cn_us <- as.data.frame(lapply(tariffs_cn_us, as.numeric))
+
+colnames(tariffs_cn_us) <- c(months)
+rownames(tariffs_cn_us) <- c(tariffs_cn[, 1])
+
+
+
+#Filling up the dataframe
+for (i in seq(1, nrow(tariffs_cn))){
+  tariffs_cn_us[i, 16:60] <- tariffs_cn[i, 3]   #Apr 18, 232 Retalliation
+  
+  tariffs_cn_us[i, 19:60] <- tariffs_cn[i, 4] + tariffs_cn_us[i, 19] #Jul 18, Retaliation to 301 List 1
+  
+  tariffs_cn_us[i, 20:60] <- tariffs_cn[i, 5] + tariffs_cn_us[i, 20] #Aug 18, Retaliation to 301 List 2
+  
+  tariffs_cn_us[i, 21:60] <- tariffs_cn[i, 6] + tariffs_cn_us[i, 21] #Sep 18, Retaliation to 301 List 3
+  
+  tariffs_cn_us[i, 25:60] <- tariffs_cn[i, 7] + tariffs_cn_us[i, 25] #Jan 19, Suspension of some retaliation tariffs against auto parts
+  
+  tariffs_cn_us[i, 30:60] <- tariffs_cn[i, 8] + tariffs_cn_us[i, 30] #Jun 19, Change of Retaliation Tariffs
+
+  tariffs_cn_us[i, 33:60] <- tariffs_cn[i, 9] + tariffs_cn_us[i, 33] #Sep 19, Change of Retaliation Tariffs in response to List 4A
+  
+  tariffs_cn_us[i, 38:60] <- tariffs_cn[i, 10] + tariffs_cn_us[i, 38] #Feb 20, Amendments in response of Phase one Agreement
+  
+}
+
+#Work in Exclusions obtained at HS8 Level
+
+
+#test <- c()
+#Check for overlap between products granted 301 Retaliation exclusions and 201 Retaliation
+
+#for (i in seq(1, nrow(tariffs_exclusions_cn))){
+  #code <- as.character(tariffs_exclusions_cn$HS08[i])
+  #if (tariffs_cn[code, 3] == 0){
+    #test <- append(test, TRUE)
+  #}
+  #if (tariffs_cn[code, 3] != 0){
+    #test <- append(test, FALSE)
+  #}
+#}
+#all(test) #All come out as True so no tariffs in response to section 232 overlap with tariffs in response to section 301
+
+
+##Work in the exclusions (Here we can now just set the tariffs to zero if an exclusions was granted for a specific product
+
+for (i in seq(nrow(tariffs_exclusions_cn))){
+  code <- as.character(tariffs_exclusions_cn$HS08[i])
+  start_col <- which(colnames(tariffs_cn_us) == tariffs_exclusions_cn$Ini_date[i])
+  end_col <- which(colnames(tariffs_cn_us) == tariffs_exclusions_cn$end_date[i])
+  tariffs_cn_us[code, start_col:end_col] <- 0
+}
+
+
+
+#Collaps the dataframe to HS6 Codes
+
+hs_8 <- as.numeric(rownames(tariffs_cn_us))
+
+tariffs_cn_us <- cbind(hs_8, tariffs_cn_us)
+
+
+tariffs_cn_us$hs_8 <- sapply(tariffs_cn_us$hs_8, function(x) as.integer(x/100))
+
+#Compute Average Tariff for each month for each hs_6 subheading
+
+#Create New Dataframe with HS6 Codes
+tariffs_cn_us_hs6 <- data.frame(matrix(ncol = 60, nrow = 5387))
+colnames(tariffs_cn_us_hs6) <- months
+
+hs_6 <- unique(tariffs_cn_us$hs_8)
+rownames(tariffs_cn_us_hs6) <- unique(hs_6)
+
+#Compute average tariffs for HS6 Codes
+#Add dummy row so for loop does not run out of bond
+
+tariffs_cn_us[nrow(tariffs_cn_us)+1, ] <- seq(1:61)
+
+#Start Mean computation
+counter = 0
+for (i in seq(1, nrow(tariffs_cn_us)-1)){ #Iterate through all columns
+  
+  if (tariffs_cn_us$hs_8[i] == tariffs_cn_us$hs_8[i+1]){ #Iterate so long until a point is reached where now successive duplicate occurs
+    counter <- counter + 1
+  }
+  
+  if (tariffs_cn_us$hs_8[i] != tariffs_cn_us$hs_8[i+1]){#Index on which no more duplicate occurs
+    code <- as.character(tariffs_cn_us$hs_8[i])  #Obtain respective HS_6 Code
+    
+    upper_index <- i-counter #Get Upper index of duplicated hs
+    
+    tariffs_cn_us_hs6[code, ] <- as.numeric(sapply(tariffs_cn_us[upper_index:i, 2:61], mean))
+    
+    
+    counter = 0
+  }
+  
+}
+
+
+
+
+#Add the Chinese MFN Rates to the tariffs
+
+#Load Chinese MFN Rates
+
+cn_mfn <- read.csv2("cn_mfn_ult.csv", header = T)
+
+colnames(cn_mfn) <-  c("hs_codes", "201701", "201702", "201703", "201704", "201705", "201706", "201707", "201708", "201709", "201710", "201711", "201712",
+                       "201801", "201802", "201803", "201804", "201805", "201806", "201807", "201808", "201809", "201810", "201811", "201812",
+                       "201901", "201902", "201903", "201904", "201905", "201906", "201907", "201908", "201909", "201910", "201911", "201912",
+                       "202001", "202002", "202003", "202004", "202005", "202006", "202007", "202008", "202009", "202010", "202011", "202012",
+                       "202101", "202102", "202103", "202104", "202105", "202106", "202107", "202108", "202109", "202110", "202111", "202112")
+
+
+rownames(cn_mfn) <- cn_mfn$hs_codes
+cn_mfn[, 2:61][cn_mfn[, 2:61] > 100 ] <- (cn_mfn[, 2:61][cn_mfn[, 2:61] > 100])/10 #Same problem as in US MFN data but only with one code 
+                                                                                  
+
+
+consensus <- cn_mfn$hs_codes %in% rownames(tariffs_cn_us_hs6) #Perfect concordance
+
+cn_mfn[is.na(cn_mfn)] <- 0
+#Add MFN tariffs to Chinese "US Tariff"
+
+
+for (i in seq(1, nrow(cn_mfn))){
+  code <- as.character(cn_mfn$hs_codes[i])
+  
+  tariffs_cn_us_hs6[code, ] <- as.numeric(tariffs_cn_us_hs6[code, ]) + as.numeric(cn_mfn[i, 2:61])
+}
+
+
+
+
+
+#Tarif No. 5 - China RoW is just the Change of the MFN tarif that occurs. There are no modification needed to the monthly MFN data that we already have here. 
+
+#1 - tariffs_us_cn_hs6
+#2 - tariffs_us_eu_hs6
+#3 - tariffs_us_row_hs6
+#4 - tariffs_cn_us_hs6
+#5 - cn_mfn
+
+#Reduce all dataframes to quarterly data
+
+reduction <- function(input_dataframe){
+  quarter_dataframe <- data.frame(matrix(ncol = 20, nrow = nrow(input_dataframe)))
+  rownames(quarter_dataframe) <- rownames(input_dataframe)
+  colnames(quarter_dataframe) <- c("2017 Q1", "2017 Q2", "2017 Q3", "2017 Q4", "2018 Q1", "2018 Q2", "2018 Q3", "2018 Q4", "2019 Q1", "2019 Q2", "2019 Q3", "2019 Q4", "2020 Q1", "2020 Q2", "2020 Q3", "2020 Q4", "2021 Q1", "2021 Q2", "2021 Q3", "2021 Q4")
+  
+  for (i in seq(1, nrow(input_dataframe))){ #Iterate through every Commodity
+    temp_row <- c((input_dataframe[i, 1] + input_dataframe[i, 2] + input_dataframe[i, 3])/3) #Initialize vector with first quarter
+    
+    for (j in seq(4, 60, by = 3)){ #iterate through all months with a window of 3
+      temp_row <- append(temp_row, c((input_dataframe[ i, j] + input_dataframe[ i, j+1] + input_dataframe[ i, j+2])/3))
+    }
+    quarter_dataframe[i, ] <- temp_row
+  }
+  return(quarter_dataframe)
+}
+
+
+#Compute Quarterly Data for all tariffs
+
+tariffs_us_cn_hs6_quart <- reduction(tariffs_us_cn_hs6)
+tariffs_us_eu_hs6_quart <- reduction(tariffs_us_eu_hs6)
+tariffs_us_row_hs6_quart <- reduction(tariffs_us_row_hs6)
+tariffs_cn_us_hs6_quart <- reduction(tariffs_cn_us_hs6)
+
+cn_mfn_mod <- cn_mfn[, 2:61]
+tariffs_cn_row_hs6_quart <- reduction(cn_mfn_mod)
+rownames(tariffs_cn_row_hs6_quart) <- cn_mfn$X
+
+
+#Adjust tariffs of us and china to contain the same hs_codes  
+#Add certain codes not codes no yet in cn tariffs to cn date dataframe. I also briefly confirm here if the tariff codes overlap with the HS6-consensus codes
+#I had obtained in the economic data (not shown), which they do. 
+xus_concord <- tariffs_us_cn_hs6_quart[!(rownames(tariffs_us_cn_hs6_quart) %in% rownames(tariffs_cn_us_hs6_quart)), ]
+
+xselect_us_concord <- xus_concord[2:9, ]
+xselect_us_concord[xselect_us_concord > 1] <- 0
+xdelete_us_concord <- data.frame(rbind(xus_concord[1, ], xus_concord[10:17, ]))
+
+xdelete_us_rows <- rownames(xdelete_us_concord)
+
+ycn_concord <- tariffs_cn_us_hs6_quart[!(rownames(tariffs_cn_us_hs6_quart) %in% rownames(tariffs_us_cn_hs6_quart)), ]
+ycn_concord[ycn_concord != 0] <- 0
+#Add the us concord tariffs to chinese tariffs, and delete delete_concord codes from us tariff sets
+#Add to Chinese Tariffs
+#No.4 Tariff
+tariffs_cn_us_hs6_quart <- rbind(tariffs_cn_us_hs6_quart, xselect_us_concord)
+
+tariffs_cn_us_hs6_quart <- cbind(rownames(tariffs_cn_us_hs6_quart), tariffs_cn_us_hs6_quart)
+tariffs_cn_us_hs6_quart$`rownames(tariffs_cn_us_hs6_quart)` <- sapply(tariffs_cn_us_hs6_quart$`rownames(tariffs_cn_us_hs6_quart)`, as.numeric)
+tariffs_cn_us_hs6_quart <- tariffs_cn_us_hs6_quart[order(tariffs_cn_us_hs6_quart$`rownames(tariffs_cn_us_hs6_quart)`), ]
+rownames(tariffs_cn_us_hs6_quart) <- tariffs_cn_us_hs6_quart$`rownames(tariffs_cn_us_hs6_quart)`
+tariffs_cn_us_hs6_quart <- tariffs_cn_us_hs6_quart[-c(1)]
+#No.5 Tariff
+tariffs_cn_row_hs6_quart <- rbind(tariffs_cn_row_hs6_quart, xselect_us_concord)
+
+tariffs_cn_row_hs6_quart <- cbind(rownames(tariffs_cn_row_hs6_quart), tariffs_cn_row_hs6_quart)
+tariffs_cn_row_hs6_quart$`rownames(tariffs_cn_row_hs6_quart)` <- sapply(tariffs_cn_row_hs6_quart$`rownames(tariffs_cn_row_hs6_quart)`, as.numeric)
+tariffs_cn_row_hs6_quart <- tariffs_cn_row_hs6_quart[order(tariffs_cn_row_hs6_quart$`rownames(tariffs_cn_row_hs6_quart)`), ]
+rownames(tariffs_cn_row_hs6_quart) <- tariffs_cn_row_hs6_quart$`rownames(tariffs_cn_row_hs6_quart)`
+tariffs_cn_row_hs6_quart <- tariffs_cn_row_hs6_quart[-c(1)]
+
+#Remove from US Data
+tariffs_us_cn_hs6_quart <- tariffs_us_cn_hs6_quart[!(rownames(tariffs_us_cn_hs6_quart) %in% xdelete_us_rows), ]
+tariffs_us_eu_hs6_quart <- tariffs_us_eu_hs6_quart[!(rownames(tariffs_us_eu_hs6_quart) %in% xdelete_us_rows), ]
+tariffs_us_row_hs6_quart <- tariffs_us_row_hs6_quart[!(rownames(tariffs_us_row_hs6_quart) %in% xdelete_us_rows), ]
+#Add the Chinese concord tariffs to the US data
+tariffs_us_cn_hs6_quart <- rbind(tariffs_us_cn_hs6_quart, ycn_concord)
+tariffs_us_eu_hs6_quart <- rbind(tariffs_us_eu_hs6_quart, ycn_concord)
+tariffs_us_row_hs6_quart <- rbind(tariffs_us_row_hs6_quart, ycn_concord)
+
+tariffs_us_cn_hs6_quart <- cbind(rownames(tariffs_us_cn_hs6_quart), tariffs_us_cn_hs6_quart)
+tariffs_us_eu_hs6_quart <- cbind(rownames(tariffs_us_eu_hs6_quart), tariffs_us_eu_hs6_quart)
+tariffs_us_row_hs6_quart <- cbind(rownames(tariffs_us_row_hs6_quart), tariffs_us_row_hs6_quart)
+
+tariffs_us_cn_hs6_quart$`rownames(tariffs_us_cn_hs6_quart)` <- sapply(tariffs_us_cn_hs6_quart$`rownames(tariffs_us_cn_hs6_quart)`, as.numeric)
+tariffs_us_eu_hs6_quart$`rownames(tariffs_us_eu_hs6_quart)` <- sapply(tariffs_us_eu_hs6_quart$`rownames(tariffs_us_eu_hs6_quart)`, as.numeric)
+tariffs_us_row_hs6_quart$`rownames(tariffs_us_row_hs6_quart)` <- sapply(tariffs_us_row_hs6_quart$`rownames(tariffs_us_row_hs6_quart)`, as.numeric)
+
+
+tariffs_us_cn_hs6_quart <- tariffs_us_cn_hs6_quart[order(tariffs_us_cn_hs6_quart$`rownames(tariffs_us_cn_hs6_quart)`), ]
+tariffs_us_eu_hs6_quart <- tariffs_us_eu_hs6_quart[order(tariffs_us_eu_hs6_quart$`rownames(tariffs_us_eu_hs6_quart)`), ]
+tariffs_us_row_hs6_quart <- tariffs_us_row_hs6_quart[order(tariffs_us_row_hs6_quart$`rownames(tariffs_us_row_hs6_quart)`), ]
+
+rownames(tariffs_us_cn_hs6_quart) <- tariffs_us_cn_hs6_quart$`rownames(tariffs_us_cn_hs6_quart)`
+rownames(tariffs_us_eu_hs6_quart) <- tariffs_us_eu_hs6_quart$`rownames(tariffs_us_eu_hs6_quart)`
+rownames(tariffs_us_row_hs6_quart) <- tariffs_us_row_hs6_quart$`rownames(tariffs_us_row_hs6_quart)`
+
+tariffs_us_cn_hs6_quart <- tariffs_us_cn_hs6_quart[-c(1)]
+tariffs_us_eu_hs6_quart <- tariffs_us_eu_hs6_quart[-c(1)]
+tariffs_us_row_hs6_quart <- tariffs_us_row_hs6_quart[-c(1)]
+
+#Fill in MFN Data for the newly added codes
+#US Data
+us_mfn <- read.csv2("us_mfn_ult.csv", header = T)
+cn_mfn <- read.csv2("cn_mfn_ult.csv", header = T)
+
+#Check if there is us_mfn data for the newly added codes --> 84 positive entries
+mfn_new_codes <- us_mfn[us_mfn$X %in% rownames(ycn_concord), ]
+rownames(mfn_new_codes) <- mfn_new_codes$X
+mfn_new_codes <- mfn_new_codes[-c(1)]
+
+mfn_new_codes <- reduction(mfn_new_codes)
+
+for (i in seq(1, nrow(mfn_new_codes))){
+  code <- as.character(rownames(mfn_new_codes)[i])
+  
+  tariffs_us_cn_hs6_quart[code, ] <- mfn_new_codes[code, ]
+  tariffs_us_eu_hs6_quart[code, ] <- mfn_new_codes[code, ]
+  tariffs_us_row_hs6_quart[code, ] <- mfn_new_codes[code, ]
+}
+
+#Check if there is cn_mfn data for the newly added codes --> No so no modification here
+
+#Export Data
+write.csv2(tariffs_us_cn_hs6_quart, "tariffs_us_cn_mod_new.csv")
+write.csv2(tariffs_us_eu_hs6_quart, "tariffs_us_eu_mod_new.csv")
+write.csv2(tariffs_us_row_hs6_quart, "tariffs_us_row_mod_new.csv")
+write.csv2(tariffs_cn_us_hs6_quart, "tariffs_cn_us_mod_new.csv")
+write.csv2(tariffs_cn_row_hs6_quart, "tariffs_cn_row_mod_new.csv")
