@@ -1,0 +1,121 @@
+#Compute US and CN MFN Data from Market Access Map Database
+
+#Section 1 - US MFN Data
+#Import all MFN tarifs on HS6 level for each year
+
+mfn_us_2017 <- read.csv2("C:/Users/nikan/OneDrive/Desktop/Trading_Data/Tarif_Data/US_MFN_2017.csv", header = T)
+mfn_us_2018 <- read.csv2("C:/Users/nikan/OneDrive/Desktop/Trading_Data/Tarif_Data/US_MFN_2018.csv", header = T)
+mfn_us_2019 <- read.csv2("C:/Users/nikan/OneDrive/Desktop/Trading_Data/Tarif_Data/US_MFN_2019.csv", header = T)
+mfn_us_2020 <- read.csv2("C:/Users/nikan/OneDrive/Desktop/Trading_Data/Tarif_Data/US_MFN_2020.csv", header = T)
+mfn_us_2021 <- read.csv2("C:/Users/nikan/OneDrive/Desktop/Trading_Data/Tarif_Data/US_MFN_2021.csv", header = T)
+
+check <- mfn_us_2019$ProductCode %in% mfn_us_2017$ProductCode
+
+#Reduce to initial HSv17 codes (new codes not in dataframe of other tarif data)
+mfn_us_2019 <- mfn_us_2019[check,]
+mfn_us_2020 <- mfn_us_2020[check,]
+mfn_us_2021 <- mfn_us_2021[check,]
+
+
+#Concatenate into single dataframe
+
+us_mfn <- cbind(mfn_us_2017$ProductCode, mfn_us_2017$AVE, mfn_us_2018$AVE, mfn_us_2019$AVE, mfn_us_2020$AVE, mfn_us_2021$AVE)
+
+us_mfn <- data.frame(us_mfn)
+
+#Convert to numeric
+us_mfn <- as.data.frame(sapply(us_mfn, as.numeric))
+us_mfn[is.na(us_mfn)] <- 0
+
+colnames(us_mfn) <- c("hs_codes", "2017", "2018", "2019", "2020", "2021")
+rownames(us_mfn) <- us_mfn[, 1]
+
+
+
+#Expand table to contain monthly data
+
+months <- c("201701", "201702", "201703", "201704", "201705", "201706", "201707", "201708", "201709", "201710", "201711", "201712",
+            "201801", "201802", "201803", "201804", "201805", "201806", "201807", "201808", "201809", "201810", "201811", "201812",
+            "201901", "201902", "201903", "201904", "201905", "201906", "201907", "201908", "201909", "201910", "201911", "201912",
+            "202001", "202002", "202003", "202004", "202005", "202006", "202007", "202008", "202009", "202010", "202011", "202012",
+            "202101", "202102", "202103", "202104", "202105", "202106", "202107", "202108", "202109", "202110", "202111", "202112")
+
+#Create empty df
+
+us_mfn_months <- data.frame(matrix(ncol = 60, nrow = 5357))
+colnames(us_mfn_months) <- months
+rownames(us_mfn_months) <- us_mfn[, 1]
+
+#Fill up the dataframe
+
+for (i in seq(1, nrow(us_mfn))){
+  us_mfn_months[i, 1:12] <- us_mfn[i, 2]
+  
+  us_mfn_months[i, 13:24] <- us_mfn[i, 3]
+  
+  us_mfn_months[i, 25:36] <- us_mfn[i, 4]
+  
+  us_mfn_months[i, 37:48] <- us_mfn[i, 5]
+  
+  us_mfn_months[i, 49:60] <- us_mfn[i, 6]
+  
+}
+
+us_mfn_months <- us_mfn_months*100
+
+#Export Table
+write.csv2(us_mfn_months, "us_mfn_ult.csv")
+
+#Section 2 - CN MFN Data
+
+mfn_cn_2017 <- read.csv2("C:/Users/nikan/OneDrive/Desktop/Trading_Data/Tarif_Data/CN_MFN_2017.csv", header = T)
+mfn_cn_2018 <- read.csv2("C:/Users/nikan/OneDrive/Desktop/Trading_Data/Tarif_Data/CN_MFN_2018.csv", header = T)
+mfn_cn_2019 <- read.csv2("C:/Users/nikan/OneDrive/Desktop/Trading_Data/Tarif_Data/CN_MFN_2019.csv", header = T)
+mfn_cn_2020 <- read.csv2("C:/Users/nikan/OneDrive/Desktop/Trading_Data/Tarif_Data/CN_MFN_2020.csv", header = T)
+mfn_cn_2021 <- read.csv2("C:/Users/nikan/OneDrive/Desktop/Trading_Data/Tarif_Data/CN_MFN_2021.csv", header = T)
+
+
+
+#Concatenate into single dataframe
+
+cn_mfn <- cbind(mfn_cn_2017$ProductCode, mfn_cn_2017$AVE, mfn_cn_2018$AVE, mfn_cn_2019$AVE, mfn_cn_2020$AVE, mfn_cn_2021$AVE)
+
+cn_mfn <- data.frame(cn_mfn)
+
+#Convert to numeric
+cn_mfn <- as.data.frame(sapply(cn_mfn, as.numeric))
+cn_mfn[is.na(cn_mfn)] <- 0
+
+colnames(cn_mfn) <- c("hs_codes", "2017", "2018", "2019", "2020", "2021")
+rownames(cn_mfn) <- cn_mfn[, 1]
+
+
+
+#Expand table to contain monthly data
+#Create empty df
+
+cn_mfn_months <- data.frame(matrix(ncol = 60, nrow = 5387))
+colnames(cn_mfn_months) <- months
+rownames(cn_mfn_months) <- cn_mfn[, 1]
+
+#Fill up the dataframe
+
+for (i in seq(1, nrow(cn_mfn))){
+  cn_mfn_months[i, 1:12] <- cn_mfn[i, 2]
+  
+  cn_mfn_months[i, 13:24] <- cn_mfn[i, 3]
+  
+  cn_mfn_months[i, 25:36] <- cn_mfn[i, 4]
+  
+  cn_mfn_months[i, 37:48] <- cn_mfn[i, 5]
+  
+  cn_mfn_months[i, 49:60] <- cn_mfn[i, 6]
+  
+}
+
+cn_mfn_months <- cn_mfn_months*100
+
+#Export Table
+write.csv2(cn_mfn_months, "cn_mfn_ult.csv")
+
+test <- read.csv2("cn_mfn_ult.csv", header = T)
