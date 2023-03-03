@@ -1,0 +1,257 @@
+####This Script contains the code for performing the fixed effects regressionn
+####The largest part of this script is concerned with reformatting the data into a special 
+####conformation that is recognized by the R Regression function
+
+####The only difference in this script from the aggregated analysis, is how the time intervals are computed. 
+
+library("lfe")
+
+  
+  raw_data <- read.csv2("C:/Users/nikan/OneDrive/Desktop/Trading_Data/R_Trading/Econ_Data_Intermediary/semi_cn_us_import_semiult.csv", header = T)
+  raw_data[is.na(raw_data)] <- 0
+  
+  tariff_us_cn <- read.csv2("C:/Users/nikan/OneDrive/Desktop/Trading_Data/R_Trading/Final_Data/tariffs_us_cn_mod_new.csv", header = T)
+  tariff_us_eu <- read.csv2("C:/Users/nikan/OneDrive/Desktop/Trading_Data/R_Trading/Final_Data/tariffs_us_eu_mod_new.csv", header = T)
+  tariff_us_row <- read.csv2("C:/Users/nikan/OneDrive/Desktop/Trading_Data/R_Trading/Final_Data/tariffs_us_row_mod_new.csv", header = T)
+  tariff_cn_us <- read.csv2("C:/Users/nikan/OneDrive/Desktop/Trading_Data/R_Trading/Final_Data/tariffs_cn_us_mod_new.csv", header = T)
+  tariff_cn_row <- read.csv2("C:/Users/nikan/OneDrive/Desktop/Trading_Data/R_Trading/cn_mfn_quart.csv", header = T)
+  #In the fixed effect approach we want to include time-dependent effects in 10 different, specified sectors, first
+  #all hs_codes have to be sorted into one of the sectors. 
+  
+  
+  
+  rownames(tariff_us_cn) <- tariff_us_cn$X
+  rownames(tariff_us_eu) <- tariff_us_eu$X
+  rownames(tariff_us_row) <- tariff_us_row$X
+  rownames(tariff_cn_us) <- tariff_cn_us$X
+  rownames(tariff_cn_row) <- tariff_cn_row$X
+  
+  tariff_us_cn <- tariff_us_cn[rownames(tariff_us_cn) != "710820", ]
+  tariff_us_eu <- tariff_us_eu[rownames(tariff_us_eu) != "710820", ]
+  tariff_us_row <- tariff_us_row[rownames(tariff_us_row) != "710820", ]
+  tariff_cn_us <- tariff_cn_us[rownames(tariff_cn_us) != "710820", ]
+  tariff_cn_row <- tariff_cn_row[rownames(tariff_cn_row) != "710820", ]
+  
+  #tariff_us_cn <- tariff_us_cn[-c(1)]
+  #tariff_us_eu <- tariff_us_eu[-c(1)]
+  #tariff_us_row <- tariff_us_row[-c(1)]
+  #tariff_cn_us <- tariff_cn_us[-c(1)]
+  #tariff_cn_row <- tariff_cn_row[-c(1)]
+  
+  colnames(tariff_us_cn) <- c("hs_codes", "2017 Q1", "2017 Q2", "2017 Q3", "2017 Q4", "2018 Q1", "2018 Q2", "2018 Q3", "2018 Q4", "2019 Q1", "2019 Q2", "2019 Q3", "2019 Q4", "2020 Q1", "2020 Q2", "2020 Q3", "2020 Q4", "2021 Q1", "2021 Q2", "2021 Q3", "2021 Q4")
+  colnames(tariff_us_eu) <- c("hs_codes", "2017 Q1", "2017 Q2", "2017 Q3", "2017 Q4", "2018 Q1", "2018 Q2", "2018 Q3", "2018 Q4", "2019 Q1", "2019 Q2", "2019 Q3", "2019 Q4", "2020 Q1", "2020 Q2", "2020 Q3", "2020 Q4", "2021 Q1", "2021 Q2", "2021 Q3", "2021 Q4")
+  colnames(tariff_us_row) <- c("hs_codes", "2017 Q1", "2017 Q2", "2017 Q3", "2017 Q4", "2018 Q1", "2018 Q2", "2018 Q3", "2018 Q4", "2019 Q1", "2019 Q2", "2019 Q3", "2019 Q4", "2020 Q1", "2020 Q2", "2020 Q3", "2020 Q4", "2021 Q1", "2021 Q2", "2021 Q3", "2021 Q4")
+  colnames(tariff_cn_us) <- c("hs_codes", "2017 Q1", "2017 Q2", "2017 Q3", "2017 Q4", "2018 Q1", "2018 Q2", "2018 Q3", "2018 Q4", "2019 Q1", "2019 Q2", "2019 Q3", "2019 Q4", "2020 Q1", "2020 Q2", "2020 Q3", "2020 Q4", "2021 Q1", "2021 Q2", "2021 Q3", "2021 Q4")
+  colnames(tariff_cn_row) <- c("hs_codes", "2017 Q1", "2017 Q2", "2017 Q3", "2017 Q4", "2018 Q1", "2018 Q2", "2018 Q3", "2018 Q4", "2019 Q1", "2019 Q2", "2019 Q3", "2019 Q4", "2020 Q1", "2020 Q2", "2020 Q3", "2020 Q4", "2021 Q1", "2021 Q2", "2021 Q3", "2021 Q4")
+  
+  raw_data <- raw_data[-c(1)]
+  rownames(raw_data) <- raw_data$hs_codes
+  colnames(raw_data) <- c("hs_codes", "labels", "2017 Q1", "2017 Q2", "2017 Q3", "2017 Q4", "2018 Q1", "2018 Q2", "2018 Q3", "2018 Q4", "2019 Q1", "2019 Q2", "2019 Q3", "2019 Q4", "2020 Q1", "2020 Q2", "2020 Q3", "2020 Q4", "2021 Q1", "2021 Q2", "2021 Q3", "2021 Q4")
+  
+  #1) Sort Codes into Economic Sectors: Agriculture, Minerals, Materials, Chemicals, Machinery, Transportation, Textiles & Apparell, Metals, Miscellaneous
+  library("tibble")
+  
+  sector <- c()
+  
+  for (i in seq(1, nrow(raw_data))){
+    if (raw_data$hs_codes[i] <= 249999){
+      sector <- append(sector, "Agriculture")
+    }
+    if ((raw_data$hs_codes[i] >= 250000)&(raw_data$hs_codes[i] <= 279999)){
+      sector <- append(sector, "Minerals")
+    }
+    if ((raw_data$hs_codes[i] >= 280000)&(raw_data$hs_codes[i] <= 409999)){
+      sector <- append(sector, "Chemicals")
+    }   
+    if ((raw_data$hs_codes[i] >= 410000)&(raw_data$hs_codes[i] <= 439999)){
+      sector <- append(sector, "Textiles&Apparel")
+    }
+    if ((raw_data$hs_codes[i] >= 440000)&(raw_data$hs_codes[i] <= 499999)){
+      sector <- append(sector, "Materials")
+    }
+    if ((raw_data$hs_codes[i] >= 500000)&(raw_data$hs_codes[i] <= 679999)){
+      sector <- append(sector, "Textiles&Apparel")
+    }
+    if ((raw_data$hs_codes[i] >= 680000)&(raw_data$hs_codes[i] <= 719999)){
+      sector <- append(sector, "Materials")
+    }
+    if ((raw_data$hs_codes[i] >= 720000)&(raw_data$hs_codes[i] <= 839999)){
+      sector <- append(sector, "Metals")
+    }
+    if ((raw_data$hs_codes[i] >= 840000)&(raw_data$hs_codes[i] <= 859999)){
+      sector <- append(sector, "Machinery")
+    }
+    if ((raw_data$hs_codes[i] >= 860000)&(raw_data$hs_codes[i] <= 899999)){
+      sector <- append(sector, "Transportation")
+    }
+    if ((raw_data$hs_codes[i] >= 900000)&(raw_data$hs_codes[i] <= 929999)){
+      sector <- append(sector, "Miscellaneous")
+    }
+    if ((raw_data$hs_codes[i] >= 930000)&(raw_data$hs_codes[i] <= 939999)){
+      sector <- append(sector, "Machinery")
+    }
+    if (raw_data$hs_codes[i] >= 940000){
+      sector <- append(sector, "Miscellaneous")
+    }
+  }
+  #Insert into dataframe
+  raw_data <- add_column(raw_data, sector, .after = 2)
+  
+  #2) Not every dataset will have trade data for every commodity - e.g. China may not export buffalo meat. However these commodities may
+  #   still have tariff changes associated with them. If trade flows do not change because simply there is no trade flow, and tariffs still
+  #   change in the commodity, this will skew the estimated coefficient upward so data in which no trade flow is registered for 5 quarters or more, are removed. (From the economic and the tariff datasets)
+  
+  
+  
+  # Assumption of steady tradeflow
+  
+  tariff_us_cn <- tariff_us_cn[rowSums(raw_data == 0) <= 15, ]
+  tariff_us_eu <- tariff_us_eu[rowSums(raw_data == 0) <= 15, ]
+  tariff_us_row <- tariff_us_row[rowSums(raw_data == 0) <= 15, ]
+  tariff_cn_us <- tariff_cn_us[rowSums(raw_data == 0) <= 15, ]
+  tariff_cn_row <- tariff_cn_row[rowSums(raw_data == 0) <= 15, ]
+  raw_data <- raw_data[rowSums(raw_data == 0) <= 15, ]
+  
+
+  
+  
+  # 3) Aggregate the data into half year intervals
+  for (i in seq(1, nrow(raw_data))){
+    raw_data[i, 4] <- sum(raw_data[i, 4:5])
+    raw_data[i, 5] <- sum(raw_data[i, 6:7])
+    raw_data[i, 6] <- sum(raw_data[i, 8:9])
+    raw_data[i, 7] <- sum(raw_data[i, 10:11])
+    raw_data[i, 8] <- sum(raw_data[i, 12:13])
+    raw_data[i, 9] <- sum(raw_data[i, 14:15])
+    raw_data[i, 10] <- sum(raw_data[i, 16:17])
+    raw_data[i, 11] <- sum(raw_data[i, 18:19])
+    raw_data[i, 12] <- sum(raw_data[i, 20:21])
+    raw_data[i, 13] <- sum(raw_data[i, 22:23])
+  }
+  raw_data <- raw_data[-c(14, 15, 16, 17, 18, 19, 20, 21, 22, 23)]
+  colnames(raw_data) <- c("hs_codes", "labels", "sector", "17-Q1Q2", "17-Q3Q4", "18-Q1Q2", "18-Q3Q4", 
+                          "19-Q1Q2", "19-Q3Q4", "20-Q1Q2", "20-Q3Q4", "21Q1Q2", "21-Q3Q4")
+  
+  tariff_agg <- function(tariff){
+    
+    for (i in seq(1, nrow(tariff))){
+      tariff[i, 2] <- mean(as.numeric(tariff[i, 2:3]))
+      tariff[i, 3] <- mean(as.numeric(tariff[i, 4:5]))
+      tariff[i, 4] <- mean(as.numeric(tariff[i, 6:7]))
+      tariff[i, 5] <- mean(as.numeric(tariff[i, 8:9]))
+      tariff[i, 6] <- mean(as.numeric(tariff[i, 10:11]))
+      tariff[i, 7] <- mean(as.numeric(tariff[i, 12:13]))
+      tariff[i, 8] <- mean(as.numeric(tariff[i, 14:15]))
+      tariff[i, 9] <- mean(as.numeric(tariff[i, 16:17]))
+      tariff[i, 10] <- mean(as.numeric(tariff[i, 18:19]))
+      tariff[i, 11] <- mean(as.numeric(tariff[i, 20:21]))
+    }
+    tariff <- tariff[-c(12, 13, 14, 15, 16, 17, 18, 19, 20, 21)]
+    colnames(tariff) <- c("hs_codes", "17-Q1Q2", "17-Q3Q4", "18-Q1Q2", "18-Q3Q4", 
+                          "19-Q1Q2", "19-Q3Q4", "20-Q1Q2", "20-Q3Q4", "21Q1Q2", "21-Q3Q4")
+    return(tariff)
+  }
+  tariff_us_cn <- tariff_agg(tariff_us_cn)
+  tariff_us_eu <- tariff_agg(tariff_us_eu)
+  tariff_us_row <- tariff_agg(tariff_us_row)
+  tariff_cn_us <- tariff_agg(tariff_cn_us)
+  tariff_cn_row <- tariff_agg(tariff_cn_row)
+  
+  #4) Log transform the trade data (Log(x + 1) transformation is done to deal with 0 values)
+  raw_data[, 4:13] <- raw_data[, 4:13] + 1
+  raw_data[, 4:13] <- log(raw_data[, 4:13])
+  
+
+  
+  
+  
+  #5) Compute One year differences of the data. The difference of either 2017Q1Q2 or 2017Q3Q4 will be taken with each subsequent half year. 
+  
+  yearly_differences <- function(data_input){
+    tariff_or_trade <- ncol(data_input)
+    if (tariff_or_trade == 11){
+      start_index <- 2
+      end_index <- 11
+    }
+    if (tariff_or_trade == 13){
+      start_index <- 4
+      end_index <- 13
+    }
+    
+    data_dummy <- data_input
+    for (i in seq(start_index+2, end_index, by = 2)){
+      data_dummy[, i-2] <- data_input[, i] - data_input[, start_index]
+      data_dummy[, i-1] <- data_input[, i+1] - data_input[, start_index+1]
+    }
+    data_input <- data_dummy
+    
+
+    data_input <- data_input[-c(end_index, end_index-1)]
+    
+    if (tariff_or_trade == 11){ #It is a tariff
+      colnames(data_input) <- c("hs_codes", 
+                                "18-Q1Q2", "18-Q3Q4", "19-Q1Q2", "19-Q3Q4", "20-Q1Q2", "20-Q3Q4", "21Q1Q2", "21-Q3Q4")
+    }
+    if (tariff_or_trade == 13){ #It is a tariff
+      colnames(data_input) <- c("hs_codes", "labels", "sector",
+                                "18-Q1Q2", "18-Q3Q4", "19-Q1Q2", "19-Q3Q4", "20-Q1Q2", "20-Q3Q4", "21Q1Q2", "21-Q3Q4")
+      
+    }
+    return(data_input)
+  }
+  raw_data <- yearly_differences(raw_data)
+  
+  tariff_us_cn <- yearly_differences(tariff_us_cn)
+  tariff_us_eu <- yearly_differences(tariff_us_eu)
+  tariff_us_row <- yearly_differences(tariff_us_row)
+  tariff_cn_us <- yearly_differences(tariff_cn_us)
+  tariff_cn_row <- yearly_differences(tariff_cn_row)
+  
+  #6) Now the data has to be transformed into a different form so the built in r function for fixed effect regressions is actually able to 
+  #   compute the regression. The form we want to yield looks like this:
+  #   |         |         |           |             ...         |                       |                           
+  #   |         |         |           |             ...         |                       |      
+  #   V         V         V           V             ...         V                       v
+  #Products   Time    Trade_Value   Tariff_Diff_1   ...   Tariff_Diff_5     Sector_Temporal_Effect (Dummy)
+  
+  product_vector <- rep(c(raw_data[, 1]), each = 8)
+  time_vector <- rep(c(colnames(raw_data)[4:11]), times = nrow(raw_data))
+  trade_vector <- as.vector(as.numeric(t(raw_data[, 4:11])))
+  tariff_vector_us_cn <- as.vector(as.numeric(t(tariff_us_cn[, 2:9])))
+  tariff_vector_us_eu <- as.vector(as.numeric(t(tariff_us_eu[, 2:9])))
+  tariff_vector_us_row <- as.vector(as.numeric(t(tariff_us_row[, 2:9])))
+  tariff_vector_cn_us <- as.vector(as.numeric(t(tariff_cn_us[, 2:9])))
+  tariff_vector_cn_row <- as.vector(as.numeric(t(tariff_cn_row[, 2:9])))
+  
+  #The sector temporal effect dummies give every code a sector classification, combined with the time instance of the observation. This
+  #will result in a temporal dummy that is specific to each sector and to each quarter instance
+  sector_vector <- rep(c(raw_data$sector), each = 8)
+  sector_vector_temp <- paste(time_vector, sector_vector)
+  
+  
+  #Now all of the columns can be formed into the dataframe for the analysis
+  
+  fe_analysis <- data.frame(cbind(product_vector, time_vector, trade_vector, tariff_vector_us_cn, tariff_vector_us_eu,
+                                  tariff_vector_us_row, tariff_vector_cn_us, tariff_vector_cn_row, sector_vector_temp))
+  colnames(fe_analysis) <- c("product", "quarters", "tradeflow", "tariff_us_cn", "tariff_us_eu", "tariff_us_row", 
+                             "tariff_cn_us", "tariff_cn_row", "sector")
+  
+  fe_analysis[, 3:8] <- data.frame(sapply(fe_analysis[, 3:8], as.numeric))
+  is.num <- sapply(fe_analysis, is.numeric)
+  fe_analysis[is.num] <- lapply(fe_analysis[is.num], round, 3)
+  
+  #For Sector specifications divide the dataframe into the sectors
+  
+  fe_18Q1 <- fe_analysis[fe_analysis$quarters == "18-Q1Q2", ]
+  fe_18Q3 <- fe_analysis[fe_analysis$quarters == "18-Q3Q4", ]
+  fe_19Q1 <- fe_analysis[fe_analysis$quarters == "19-Q1Q2", ]
+  fe_19Q3 <- fe_analysis[fe_analysis$quarters == "19-Q3Q4", ]
+  fe_20Q1 <- fe_analysis[fe_analysis$quarters == "20-Q1Q2", ]
+  fe_20Q3 <- fe_analysis[fe_analysis$quarters == "20-Q3Q4", ]
+  fe_21Q1 <- fe_analysis[fe_analysis$quarters == "21Q1Q2", ]
+  fe_21Q3 <- fe_analysis[fe_analysis$quarters == "21-Q3Q4", ]
+  
+  #Compute the analysis - I cluster standard errors over products
+  thingers_crossed <- felm(tradeflow ~ tariff_us_cn + tariff_cn_us | sector | 0 | product , data = fe_20Q1)
+  
+  summary(thingers_crossed)
