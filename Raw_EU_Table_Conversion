@@ -1,0 +1,105 @@
+#This script is supposed to convert Data on EU tradeflows into a readable format
+
+table_converter_eu <- function(input_file, output_file, output_file_q) {  #arguments --> Input-Filename, Output-filename
+  
+  temp_table <- read.csv(input_file, header = TRUE)
+
+  temp_table <- temp_table[5:13]
+  temp_table <- temp_table[-c(3, 4, 7, 8)]
+
+  
+  #Get Table Dimensions
+  
+  eu_commodities <- read.csv("eu_commodities.csv", header = TRUE, colClasses = c("import_commodity_codes" = "character"))
+  eu_commodities <- eu_commodities[-c(1)]  
+
+  
+  months <- c("Jul. 2016", "Aug. 2016", "Sep. 2016", "Oct. 2016", "Nov. 2016", "Dec. 2016",
+              "Jan. 2017", "Feb. 2017", "Mar. 2017", "Apr. 2017", "May. 2017", "Jun. 2017", "Jul. 2017", "Aug. 2017", "Sep. 2017", "Oct. 2017", "Nov. 2017", "Dec. 2017", 
+              "Jan. 2018", "Feb. 2018", "Mar. 2018", "Apr. 2018", "May. 2018", "Jun. 2018", "Jul. 2018", "Aug. 2018", "Sep. 2018", "Oct. 2018", "Nov. 2018", "Dec. 2018", 
+              "Jan. 2019", "Feb. 2019", "Mar. 2019", "Apr. 2019", "May. 2019", "Jun. 2019", "Jul. 2019", "Aug. 2019", "Sep. 2019", "Oct. 2019", "Nov. 2019", "Dec. 2019", 
+              "Jan. 2020", "Feb. 2020", "Mar. 2020", "Apr. 2020", "May. 2020", "Jun. 2020", "Jul. 2020", "Aug. 2020", "Sep. 2020", "Oct. 2020", "Nov. 2020", "Dec. 2020", 
+              "Jan. 2021", "Feb. 2021", "Mar. 2021", "Apr. 2021", "May. 2021", "Jun. 2021", "Jul. 2021", "Aug. 2021", "Sep. 2021", "Oct. 2021", "Nov. 2021", "Dec. 2021", 
+              "Jan. 2022", "Feb. 2022", "Mar. 2022", "Apr. 2022", "May. 2022", "Jun. 2022")
+  
+  
+    
+  #Create empty matrix
+  
+  empty_df <- data.frame(matrix(ncol = 72, nrow = 5841))
+  
+  colnames(empty_df) <- c(months)
+  rownames(empty_df) <- c(eu_commodities$import_commodity_codes)
+  
+  
+  
+  # Filling up the matrix
+  
+  for (i in seq(1, nrow(temp_table))){
+    empty_df[temp_table$PRODUCT[i], temp_table$PERIOD_LAB[i]] <- temp_table$INDICATOR_VALUE[i]
+  }
+  
+  empty_df <- empty_df[1:5841, ]
+  
+  empty_df[is.na(empty_df)] <- 0
+  
+  
+  ###Convert Euros to USD
+  
+  #Pull monthly Exchange rate data
+  ex_rate_monthly <- read.csv("Xrate_USDperEURO.csv", header = T)
+  ex_rate_vector <- ex_rate_monthly$EXUSEU
+  #Multiply each row with the monthly exchange rate
+  
+  empty_df <- sweep(empty_df, MARGIN = 2, ex_rate_vector, "*")
+  ##Convert Strings back to numerics
+
+  
+  
+  ### Create Quarterly Data
+  empty_df_quarters <- data.frame(matrix(ncol = 24, nrow = 5841))
+  rownames(empty_df_quarters) <-  c(eu_commodities$import_commodity_codes)
+  
+  quarters <- c("2016 Q3", "2016 Q4", "2017 Q1", "2017 Q2", "2017 Q3", "2017 Q4", "2018 Q1", "2018 Q2", "2018 Q3", "2018 Q4", "2019 Q1", "2019 Q2", "2019 Q3", "2019 Q4", "2020 Q1", "2020 Q2", "2020 Q3", "2020 Q4", "2021 Q1", "2021 Q2", "2021 Q3", "2021 Q4", "2022 Q1", "2022 Q2")
+  colnames(empty_df_quarters) <- quarters
+  
+  
+  
+  for (i in seq(1, 5841)){ #Iterate through every Commodity
+    temp_row <- c(empty_df[i, 1] + empty_df[i, 2] + empty_df[i, 3]) #Initialize vector with first quarter
+    for (j in seq(4, 72, by = 3)){ #iterate through all months with a window of 3
+      temp_row <- append(temp_row, c(empty_df[ i, j] + empty_df[ i, j+1] + empty_df[ i, j+2]))
+    }
+    empty_df_quarters[i, ] <- temp_row
+  }
+    
+  # Add descriptive Labels to rows
+  empty_df <- cbind(eu_commodities$import_codelabs, empty_df)
+  empty_df_quarters <- cbind(eu_commodities$import_codelabs, empty_df_quarters)
+  
+  # Change column name of labels
+  colnames(empty_df)[1] <- "labels"
+  colnames(empty_df_quarters)[1] <- "labels"
+  
+  # Add numeric HS6 codes to table
+  empty_df <- cbind(as.numeric(eu_commodities$import_commodity_codes), empty_df)
+  empty_df_quarters <- cbind(as.numeric(eu_commodities$import_commodity_codes), empty_df_quarters)
+  
+  colnames(empty_df)[1] <- 'num_codes'
+  colnames(empty_df_quarters)[1] <- 'num_codes' 
+  
+ 
+  
+  #Write Files
+  path_out = "C:/Users/nikan/OneDrive/Desktop/Trading_Data/R_Trading/Raw_Country/"
+  fileName = paste(path_out, output_file, sep = '')
+  
+  fileName_quart = paste(path_out, output_file_q, sep = '')
+  
+  write.csv2(empty_df, fileName)
+  write.csv2(empty_df_quarters, fileName_quart)
+  
+  #Clear environment
+  rm(list=ls(all=TRUE)[sapply(mget(ls(all=TRUE)), class) == "data.frame"]) # - Dataframes
+  rm("ex_rate_vector", "months", "quarters", "temp_row", "i", "j")
+}
