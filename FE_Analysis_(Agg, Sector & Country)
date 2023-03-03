@@ -96,10 +96,10 @@ library("lfe")
   #Insert into dataframe
   raw_data <- add_column(raw_data, sector, .after = 2)
   
-  #3) Not every dataset will have trade data for every commodity - e.g. China may not export buffalo meat. However these commodities may
+  #2) Not every dataset will have trade data for every commodity - e.g. China may not export buffalo meat. However these commodities may
   #   still have tariff changes associated with them. If trade flows do not change because simply there is no trade flow, and tariffs still
-  #   change in the commodity, this will skew the estimated coefficient upward so data in which no trade flow is registered for the whole
-  #   time period are removed. (From the economic and the tariff datasets)
+  #   change in the commodity, this will skew the estimated coefficient upward so data in which no tradeflow is registered for 5 quarters or more the whole
+  #   code is removed. (From the economic and the tariff datasets)
   
   
   
@@ -112,26 +112,9 @@ library("lfe")
   tariff_cn_row <- tariff_cn_row[rowSums(raw_data == 0) <= 15, ]
   raw_data <- raw_data[rowSums(raw_data == 0) <= 15, ]
   
-  #Delete Codes in which no tradeflows occur during the period
-  
-  #delete_index <- c()
-  #for (i in seq(1, nrow(raw_data))){
-   # if (sum(raw_data[i, 4:21]) == 0){
-     # delete_index <- append(delete_index, i)
-    #}
- # }
- # raw_data <- raw_data[-delete_index, ]
- # tariff_us_cn <- tariff_us_cn[-delete_index, ]
-  #tariff_us_eu <- tariff_us_eu[-delete_index, ]
-  ##tariff_us_row <- tariff_us_row[-delete_index, ]
- # tariff_cn_us <- tariff_cn_us[-delete_index, ]
-  #tariff_cn_row <- tariff_cn_row[-delete_index, ]
-  
-  #Safe n of the regression in hs_codes
-  n <- nrow(raw_data)
   
  
-  #Intermezzo - Try aggregating the data into bigger time intervals
+  #3) Aggregating the data into bigger time intervals
   for (i in seq(1, nrow(raw_data))){
     raw_data[i, 4] <- sum(raw_data[i, 4:9])
     raw_data[i, 5] <- sum(raw_data[i, 10:15])
@@ -157,27 +140,13 @@ library("lfe")
   tariff_cn_us <- tariff_agg(tariff_cn_us)
   tariff_cn_row <- tariff_agg(tariff_cn_row)
   
-  #2) Log transform the tariff and trade data (Log(x + 1) transformation is done to deal with 0 values)
+  #4) Log transform the tariff and trade data (Log(x + 1) transformation is done to deal with 0 values)
   raw_data[, 4:6] <- raw_data[, 4:6] + 1
   raw_data[, 4:6] <- log(raw_data[, 4:6])
   
-  
-  #tariff_us_cn[, 2:4] <- tariff_us_cn[, 2:4] + 1
-  #tariff_us_eu[, 2:4] <- tariff_us_eu[, 2:4] + 1
-  #tariff_us_row[, 2:4] <- tariff_us_row[, 2:4] + 1
-  #tariff_cn_us[, 2:4] <- tariff_cn_us[, 2:4] + 1
-  #tariff_cn_row[, 2:4] <- tariff_cn_row[, 2:4] + 1
-  
-  #tariff_us_cn[, 2:4] <- log(tariff_us_cn[, 2:4])
-  #tariff_us_eu[, 2:4] <- log(tariff_us_eu[, 2:4])
-  #tariff_us_row[, 2:4] <- log(tariff_us_row[, 2:4])
-  #tariff_cn_us[, 2:4] <- log(tariff_cn_us[, 2:4])
-  #tariff_cn_row[, 2:4] <- log(tariff_cn_row[, 2:4])
-  
-  
-  
-  #4) Compute One year differences of the data. E.g. the difference of 2018Q1 - 2017Q1 in each good, for trade and tariff data. 
-  #This first of eliminates all fixed effect OMVs like seasonality. The new Variables will be called 2018/2017Q1, 2018/2017Q2, ..., 2021/2020Q4
+
+ 
+  #5) Compute differences of the data. The difference will be taken of 2018Q3-2019Q4 and 2020Q1-2021Q3 with 2017Q1-2018Q2
   
   yearly_differences <- function(data_input){
     tariff_or_trade <- ncol(data_input)
